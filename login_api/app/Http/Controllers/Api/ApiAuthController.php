@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Laravel\Socialite\Facades\Socialite;
 
 class ApiAuthController extends Controller
@@ -292,6 +293,10 @@ class ApiAuthController extends Controller
      */
     public function createAstrologer(Request $request)
     {
+        $request->merge([
+            'is_featured' => filter_var($request->input('is_featured', false), FILTER_VALIDATE_BOOLEAN),
+        ]);
+
         $validator = Validator::make($request->all(), [
             'firstName' => 'required|string|max:255',
             'lastName' => 'nullable|string|max:255',
@@ -335,7 +340,7 @@ class ApiAuthController extends Controller
             'call_price' => $request->call_price,
             'about_bio' => $request->about_bio,
             'profile_image' => $profileImagePath,
-            'is_featured' => filter_var($request->is_featured, FILTER_VALIDATE_BOOLEAN),
+            'is_featured' => $request->boolean('is_featured'),
         ]);
 
         return response()->json([
@@ -392,36 +397,62 @@ class ApiAuthController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized Access. Astrologer account required.'], 403);
         }
 
+        $request->merge([
+            'is_featured' => filter_var($request->input('is_featured', false), FILTER_VALIDATE_BOOLEAN),
+        ]);
+
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
+            'firstName' => 'required|string|max:255',
+            'lastName' => 'nullable|string|max:255',
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'password' => 'nullable|string|min:6',
+            'experience_years' => 'required|numeric',
+            'languages' => 'nullable|string',
             'specialities' => 'nullable|string',
-            'chat_price' => 'nullable|numeric',
-            'call_price' => 'nullable|numeric',
+            'chat_price' => 'required|numeric',
+            'call_price' => 'required|numeric',
             'about_bio' => 'nullable|string',
+            'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'is_featured' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
         }
 
-        $user->name = $request->name;
+        $user->name = trim($request->firstName . ' ' . $request->lastName);
+        $user->email = $request->email;
+
+        if ($request->filled('password')) {
+            $user->password = bcrypt($request->password);
+        }
+
         $user->save();
+
+        $profileImagePath = $user->astrologerDetail?->profile_image;
+        if ($request->hasFile('profile_image')) {
+            $profileImagePath = '/storage/' . $request->file('profile_image')->store('profiles', 'public');
+        }
 
         // Update or create astrologer details
         $user->astrologerDetail()->updateOrCreate(
             ['user_id' => $user->id],
             [
+                'experience_years' => $request->experience_years,
+                'languages' => $request->languages,
                 'specialities' => $request->specialities,
                 'chat_price' => $request->chat_price,
                 'call_price' => $request->call_price,
                 'about_bio' => $request->about_bio,
+                'profile_image' => $profileImagePath,
+                'is_featured' => $request->boolean('is_featured'),
             ]
         );
 
         return response()->json([
             'success' => true,
             'message' => 'Profile updated successfully',
-            'user' => $user->load('astrologerDetail')
+            'user' => $user->fresh()->load('astrologerDetail')
         ]);
     }
 }

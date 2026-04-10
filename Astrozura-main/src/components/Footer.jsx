@@ -123,7 +123,7 @@ export default function Footer() {
 
           <div className="flex gap-6 mt-3 md:mt-0 items-center">
             {!user && (
-              <Link to="/astrologer/login" className="text-[#D4A73C] font-semibold hover:text-white transition">
+              <Link to="/astrologer/login" className="text-gray-300 hover:text-[#D4A73C] transition">
                 Astrologer Login
               </Link>
             )}

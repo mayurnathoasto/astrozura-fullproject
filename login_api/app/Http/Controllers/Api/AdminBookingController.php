@@ -11,7 +11,7 @@ class AdminBookingController extends Controller
     // Get all bookings with optional filters
     public function index(Request $request)
     {
-        $query = Booking::orderBy('created_at', 'desc');
+        $query = Booking::with(['user', 'astrologer.astrologerDetail'])->orderByDesc('scheduled_at');
 
         if ($request->search) {
             $search = $request->search;
@@ -41,7 +41,13 @@ class AdminBookingController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $booking = Booking::findOrFail($id);
-        $booking->update(['status' => $request->status]);
+        $payload = ['status' => $request->status];
+
+        if ($request->status === 'completed') {
+            $payload['completed_at'] = now('Asia/Kolkata');
+        }
+
+        $booking->update($payload);
 
         return response()->json(['success' => true, 'message' => 'Booking status updated', 'booking' => $booking]);
     }
@@ -52,7 +58,7 @@ class AdminBookingController extends Controller
         return response()->json([
             'success' => true,
             'total'     => Booking::count(),
-            'pending'   => Booking::where('status', 'pending')->count(),
+            'pending'   => Booking::whereIn('status', ['pending', 'confirmed', 'in_progress'])->count(),
             'completed' => Booking::where('status', 'completed')->count(),
             'revenue'   => Booking::where('payment_status', 'paid')->sum('amount'),
         ]);

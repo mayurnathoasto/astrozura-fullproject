@@ -33,7 +33,13 @@ class UserDashboardController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20|unique:users,phone,' . $user->id,
-            'email' => 'required|email|unique:users,email,' . $user->id,
+            'email' => 'nullable|email|unique:users,email,' . $user->id,
+            'date_of_birth' => 'nullable|date',
+            'time_of_birth' => 'nullable|date_format:H:i',
+            'place_of_birth' => 'nullable|string|max:255',
+            'gender' => 'nullable|in:Male,Female,Other',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
         ]);
 
         if ($validator->fails()) {
@@ -43,16 +49,23 @@ class UserDashboardController extends Controller
             ], 422);
         }
 
-        $user->update([
-            'name' => $request->name,
-            'phone' => $request->phone,
-            'email' => $request->email,
-        ]);
+        $payload = collect($validator->validated())
+            ->map(function ($value) {
+                return $value === '' ? null : $value;
+            })
+            ->toArray();
+
+        if (empty($payload['place_of_birth'])) {
+            $payload['latitude'] = null;
+            $payload['longitude'] = null;
+        }
+
+        $user->update($payload);
 
         return response()->json([
             'status' => 'success',
             'message' => 'Profile updated successfully',
-            'data' => $user
+            'data' => $user->fresh()
         ]);
     }
 

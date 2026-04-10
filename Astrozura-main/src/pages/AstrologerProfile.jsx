@@ -173,7 +173,7 @@ TOP RATED ⭐⭐⭐⭐⭐
 <button
 onClick={()=>{
 handleBtn("chat","Chat Booking")
-navigate("/consultation",{ state:{ type:"chat", astrologer} })
+navigate(`/consultation/${astrologer.id}`,{ state:{ type:"chat", astrologer} })
 }}
 className="px-7 py-3 rounded-xl shadow border bg-[#d8b14a] text-white border-[#c7926a]"
 >
@@ -183,7 +183,7 @@ className="px-7 py-3 rounded-xl shadow border bg-[#d8b14a] text-white border-[#c
 <button
 onClick={()=>{
 handleBtn("call","Audio Call")
-navigate("/consultation",{ state:{ type:"call", astrologer} })
+navigate(`/consultation/${astrologer.id}`,{ state:{ type:"call", astrologer} })
 }}
 className="px-7 py-3 rounded-xl shadow border bg-white text-[#D4A73C] border-[#c7926a]"
 >
@@ -235,7 +235,7 @@ Consultation Plans
 <button
 onClick={()=>{
   handleBtn(plan.id,plan.time);
-  navigate("/consultation", { state: { type: "chat", astrologer, duration: plan.duration }});
+  navigate(`/consultation/${astrologer.id}`, { state: { type: "chat", astrologer, duration: plan.duration }});
 }}
 className="px-4 py-2 mt-4 w-full bg-[#d8ba4a] text-white rounded"
 >

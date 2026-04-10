@@ -34,6 +34,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [ApiAuthController::class, 'user']);
     Route::post('/logout', [ApiAuthController::class, 'logout']);
     Route::post('/astrologer/profile/update', [ApiAuthController::class, 'updateAstrologerProfile']);
+    Route::post('/bookings', [BookingController::class, 'store']);
+    Route::get('/astrologer/bookings', [BookingController::class, 'astrologerBookings']);
+    Route::post('/astrologer/bookings/{id}/complete', [BookingController::class, 'markCompleted']);
 
     // User Dashboard Routes
     Route::get('/dashboard/profile', [UserDashboardController::class, 'getProfile']);
@@ -48,8 +51,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/my-subscriptions', [SubscriptionController::class, 'mySubscriptions']);
 });
 
-// Booking - Public (allows guest checkout simulation)
-Route::post('/bookings', [BookingController::class, 'store']);
+Route::get('/bookings/availability', [BookingController::class, 'getAvailability']);
 
 // Subscription Plans - Public
 Route::get('/subscriptions/plans', [SubscriptionController::class, 'getPlans']);
@@ -101,6 +103,7 @@ Route::get('/astrology/horoscope/daily', [AstrologyController::class, 'getDailyH
 Route::get('/prokerala/horoscope/{sign}', [AstrologyController::class, 'getDailyHoroscope']);
 Route::post('/prokerala/kundli', [AstrologyController::class, 'generateKundli']);
 Route::post('/prokerala/matching', [AstrologyController::class, 'matchMaking']);
+Route::post('/prokerala/panchang', [AstrologyController::class, 'getPanchang']);
 Route::get('/prokerala/location/search', [AstrologyController::class, 'searchLocation']);
 
 Route::get('/test-endpoints', function() {

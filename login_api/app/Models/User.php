@@ -69,4 +69,14 @@ class User extends Authenticatable
     {
         return $this->hasOne(AstrologerDetail::class);
     }
+
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class);
+    }
+
+    public function astrologerBookings()
+    {
+        return $this->hasMany(Booking::class, 'astrologer_id');
+    }
 }

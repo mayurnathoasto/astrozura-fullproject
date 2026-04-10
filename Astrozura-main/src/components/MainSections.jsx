@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import astroMain from "../assets/astrol.png";
 import astro1 from "../assets/astro1.png";
 import astro2 from "../assets/astro2.png";
@@ -13,6 +14,7 @@ export default function MainSections() {
   const [astrologers, setAstrologers] = useState([]);
   const [featured, setFeatured] = useState(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   // You can use useNavigate if you have react-router-dom, but since this is just a component we can assume we either have it or just navigate via Window for now.
   // We'll use window.location.href or a generic notify to imitate the previous behavior.
@@ -110,6 +112,9 @@ export default function MainSections() {
                   onClick={() => {
                     notify("Booking Session...");
                     setFeatureBtn("book");
+                    if (featured?.id) {
+                      navigate(`/consultation/${featured.id}`, { state: { type: "chat", astrologer: featured } });
+                    }
                   }}
                   className={`px-4 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 ${
                     featureBtn === "book"
@@ -124,6 +129,9 @@ export default function MainSections() {
                   onClick={() => {
                     notify("Opening Profile");
                     setFeatureBtn("view");
+                    if (featured?.id) {
+                      navigate(`/profile/${featured.id}`, { state: { msg: "Viewing Profile..." } });
+                    }
                   }}
                   className={`px-4 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 ${
                     featureBtn === "view"
@@ -149,7 +157,10 @@ export default function MainSections() {
             </h2>
 
             <button
-              onClick={() => notify("Opening all astrologers")}
+              onClick={() => {
+                notify("Opening all astrologers");
+                navigate("/astrologers");
+              }}
               className="text-xs text-gray-400 hover:text-[#d8b14a] transition cursor-pointer">
               Showing All Astrologers
             </button>
@@ -211,8 +222,7 @@ export default function MainSections() {
                       onClick={() => {
                         notify("Viewing Profile");
                         setActiveBtn({ ...activeBtn, [i]: "view" });
-                        // If you use react-router, you'd use <Link to={`/profile/${astro.id}`}>
-                        // For the demo we simulate it or just let it be a button.
+                        navigate(`/profile/${astro.id}`, { state: { msg: "Viewing Profile..." } });
                       }}
                       className={`flex-1 text-xs py-2.5 rounded-lg font-medium transition ${
                         current === "view"
@@ -227,6 +237,7 @@ export default function MainSections() {
                       onClick={() => {
                         notify("Booking Consultation");
                         setActiveBtn({ ...activeBtn, [i]: "book" });
+                        navigate(`/consultation/${astro.id}`, { state: { type: "chat", astrologer: astro } });
                       }}
                       className={`flex-1 text-xs py-2.5 rounded-lg font-medium transition ${
                         current === "book"

@@ -195,7 +195,7 @@ return (
                 </button>
               </Link>
               <button
-                onClick={() => navigate("/consultation", { state: { type: "chat", astrologer: featuredExpert } })}
+                onClick={() => navigate(`/consultation/${featuredExpert.id}`, { state: { type: "chat", astrologer: featuredExpert } })}
                 className="bg-[#1E3557] text-white px-8 py-3.5 rounded-xl font-black text-sm hover:bg-[#162744] hover:shadow-xl hover:-translate-y-1 transition-all w-full sm:w-auto"
               >
                 Book a Session
@@ -253,7 +253,7 @@ return (
                     </button>
                   </Link>
                   <button
-                    onClick={() => navigate("/consultation", { state: { type: "chat", astrologer: astro } })}
+                    onClick={() => navigate(`/consultation/${astro.id}`, { state: { type: "chat", astrologer: astro } })}
                     className="flex-1 bg-[#1E3557] text-white px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-[#162744] hover:shadow-md transition"
                   >
                     Book Now

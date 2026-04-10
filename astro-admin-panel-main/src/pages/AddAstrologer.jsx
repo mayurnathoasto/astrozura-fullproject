@@ -39,7 +39,10 @@ export default function AddAstrologer() {
       const dataToSubmit = new FormData();
       Object.keys(formData).forEach((key) => {
         if (formData[key] !== null) {
-          dataToSubmit.append(key, formData[key]);
+          const value = key === "is_featured"
+            ? (formData[key] ? "1" : "0")
+            : formData[key];
+          dataToSubmit.append(key, value);
         }
       });
 

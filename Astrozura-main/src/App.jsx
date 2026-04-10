@@ -11,6 +11,7 @@ import Subscription from "./pages/Subscription";
 import Matching from "./pages/Matching";
 import Kundli from "./pages/Kundli";
 import Rashifal from "./pages/Rashifal";
+import Panchang from "./pages/Panchang";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import OAuthCallback from "./pages/OAuthCallback";
@@ -40,6 +41,7 @@ function App() {
           <Route path="/matching" element={<Matching />} />
           <Route path="/kundli" element={<Kundli />} />
           <Route path="/rashifal" element={<Rashifal />} />
+          <Route path="/panchang" element={<Panchang />} />
 
           {/* Astrologer Routes */}
           <Route path="/astrologer/login" element={<AstrologerLogin />} />
@@ -60,6 +62,11 @@ function App() {
           <Route path="/my-bookings" element={
             <ProtectedRoute>
               <MyBookings />
+            </ProtectedRoute>
+          } />
+          <Route path="/consultation/:astrologerId" element={
+            <ProtectedRoute>
+              <ConsultationPage />
             </ProtectedRoute>
           } />
           <Route path="/consultation" element={

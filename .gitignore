@@ -9,18 +9,18 @@
 **/.env.backup
 
 # Ignore specific test files that had keys
-login api/public/test_matching.php
-login api/public/test_kundli.php
-login api/public/test_search.php
+login_api/public/test_matching.php
+login_api/public/test_kundli.php
+login_api/public/test_search.php
 
 # Laravel specifics
-login api/storage/*.key
-login api/storage/framework/cache/data/*
-login api/storage/framework/sessions/*
-login api/storage/framework/testing/*
-login api/storage/framework/views/*
-login api/storage/logs/*.log
-login api/auth.json
+login_api/storage/*.key
+login_api/storage/framework/cache/data/*
+login_api/storage/framework/sessions/*
+login_api/storage/framework/testing/*
+login_api/storage/framework/views/*
+login_api/storage/logs/*.log
+login_api/auth.json
 
 # IDE and OS files
 .vscode/

@@ -23,6 +23,10 @@ class AstrologerDetail extends Model
         'is_featured',
     ];
 
+    protected $casts = [
+        'is_featured' => 'boolean',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);
