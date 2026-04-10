@@ -1,0 +1,388 @@
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { Upload, ArrowLeft } from "lucide-react";
+
+export default function EditProduct() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [categories, setCategories] = useState([]);
+
+  const [formData, setFormData] = useState({
+    name: "",
+    category_id: "",
+    price: "",
+    description: "",
+    benefits: "",
+    bead_count: "",
+    bead_size: "",
+    seed_type: "",
+    thread_type: "",
+    origin: "",
+    is_trending: false,
+    status: true,
+  });
+  const [imageFile, setImageFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+
+  useEffect(() => {
+    fetchCategories();
+    fetchProduct();
+  }, [id]);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/admin/ecomm/categories");
+      const result = await response.json();
+      if (result.status === "success") {
+        setCategories(result.data);
+      }
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
+
+  const fetchProduct = async () => {
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/admin/ecomm/products/${id}`);
+      const result = await response.json();
+      if (result.status === "success") {
+        const product = result.data;
+        setFormData({
+          name: product.name,
+          category_id: product.category_id,
+          price: product.price,
+          description: product.description || "",
+          benefits: product.benefits || "",
+          bead_count: product.bead_count || "",
+          bead_size: product.bead_size || "",
+          seed_type: product.seed_type || "",
+          thread_type: product.thread_type || "",
+          origin: product.origin || "",
+          is_trending: Boolean(product.is_trending),
+          status: Boolean(product.status),
+        });
+        if (product.image) {
+          setPreview(`http://127.0.0.1:8000/${product.image}`);
+        }
+      } else {
+        alert(result.message || "Product not found");
+        navigate("/products");
+      }
+    } catch (error) {
+      console.error("Error fetching product:", error);
+    } finally {
+      setInitialLoading(false);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData({
+      ...formData,
+      [name]: type === "checkbox" ? checked : value,
+    });
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.name || !formData.category_id || !formData.price) {
+      alert("Name, Category, and Price are required!");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const data = new FormData();
+      data.append("name", formData.name);
+      data.append("category_id", formData.category_id);
+      data.append("price", formData.price);
+      data.append("description", formData.description);
+      data.append("benefits", formData.benefits);
+      data.append("bead_count", formData.bead_count);
+      data.append("bead_size", formData.bead_size);
+      data.append("seed_type", formData.seed_type);
+      data.append("thread_type", formData.thread_type);
+      data.append("origin", formData.origin);
+      data.append("is_trending", formData.is_trending ? 1 : 0);
+      data.append("status", formData.status ? 1 : 0);
+      
+      if (imageFile) {
+        data.append("image", imageFile);
+      }
+
+      const response = await fetch(`http://127.0.0.1:8000/api/admin/ecomm/products/update/${id}`, {
+        method: "POST",
+        body: data,
+      });
+
+      const result = await response.json();
+      if (result.status === "success") {
+        alert("Product updated successfully!");
+        navigate("/products");
+      } else {
+        alert(result.message || "Failed to update product.");
+      }
+    } catch (error) {
+      console.error("Error updating product:", error);
+      alert("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (initialLoading) {
+    return <div className="p-6">Loading product details...</div>;
+  }
+
+  return (
+    <div className="bg-white p-6 rounded-lg shadow-sm font-sans mx-auto max-w-3xl">
+      <div className="flex items-center gap-4 mb-6">
+        <Link to="/products" className="text-gray-500 hover:text-black">
+          <ArrowLeft size={24} />
+        </Link>
+        <h1 className="text-2xl font-bold">Edit Product</h1>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Product Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Product Name *
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              placeholder="Enter product name"
+              required
+            />
+          </div>
+
+          {/* Category Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Select Category *
+            </label>
+            <select
+              name="category_id"
+              value={formData.category_id}
+              onChange={handleInputChange}
+              className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white"
+              required
+            >
+              <option value="">-- Choose a Category --</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Price */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Price ($) *
+            </label>
+            <input
+              type="number"
+              name="price"
+              step="0.01"
+              value={formData.price}
+              onChange={handleInputChange}
+              className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              placeholder="0.00"
+              required
+            />
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Short Description
+            </label>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              rows="3"
+              className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              placeholder="Write a brief description..."
+            ></textarea>
+          </div>
+          {/* Benefits */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Benefits (Optional)
+            </label>
+            <textarea
+              name="benefits"
+              value={formData.benefits}
+              onChange={handleInputChange}
+              rows="3"
+              className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              placeholder="Product benefits..."
+            ></textarea>
+          </div>
+        </div>
+
+        <div className="border-t pt-4">
+          <h3 className="text-lg font-bold mb-4">Specifications (Optional)</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Bead Count</label>
+              <input
+                type="text"
+                name="bead_count"
+                className="w-full border px-4 py-2 rounded-lg"
+                placeholder="e.g. 108 + 1"
+                value={formData.bead_count}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Bead Size</label>
+              <input
+                type="text"
+                name="bead_size"
+                className="w-full border px-4 py-2 rounded-lg"
+                placeholder="e.g. 8mm"
+                value={formData.bead_size}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Seed Type</label>
+              <input
+                type="text"
+                name="seed_type"
+                className="w-full border px-4 py-2 rounded-lg"
+                placeholder="e.g. 5 Mukhi"
+                value={formData.seed_type}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Thread Type</label>
+              <input
+                type="text"
+                name="thread_type"
+                className="w-full border px-4 py-2 rounded-lg"
+                placeholder="e.g. Nylon"
+                value={formData.thread_type}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Origin</label>
+              <input
+                type="text"
+                name="origin"
+                className="w-full border px-4 py-2 rounded-lg"
+                placeholder="e.g. Nepal"
+                value={formData.origin}
+                onChange={handleInputChange}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Product Image Upload */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Product Image
+          </label>
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center relative bg-gray-50 hover:bg-gray-100 transition">
+            {preview ? (
+              <div className="flex flex-col items-center">
+                <img src={preview} alt="Preview" className="h-32 object-contain mb-3 rounded-md shadow-sm" />
+                <span className="text-sm text-gray-500">Click to change image</span>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center">
+                <Upload size={32} className="text-gray-400 mb-2" />
+                <span className="text-sm font-medium text-gray-600">Upload Image</span>
+                <span className="text-xs text-gray-400 mt-1">PNG, JPG up to 2MB</span>
+              </div>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            />
+          </div>
+        </div>
+
+        {/* Toggles */}
+        <div className="flex flex-wrap gap-6 pt-2">
+          {/* Trending Toggle */}
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="is_trending"
+              name="is_trending"
+              checked={formData.is_trending}
+              onChange={handleInputChange}
+              className="w-5 h-5 text-yellow-500 bg-gray-100 border-gray-300 rounded focus:ring-yellow-500 focus:ring-2 cursor-pointer"
+            />
+            <label htmlFor="is_trending" className="text-sm font-medium text-gray-700 cursor-pointer">
+              Mark as Trending
+            </label>
+          </div>
+
+          {/* Status Toggle */}
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="status"
+              name="status"
+              checked={formData.status}
+              onChange={handleInputChange}
+              className="w-5 h-5 text-yellow-500 bg-gray-100 border-gray-300 rounded focus:ring-yellow-500 focus:ring-2 cursor-pointer"
+            />
+            <label htmlFor="status" className="text-sm font-medium text-gray-700 cursor-pointer">
+              Active Status
+            </label>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-4 pt-6 border-t">
+          <Link
+            to="/products"
+            className="px-6 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
+          >
+            Cancel
+          </Link>
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-6 py-2 bg-yellow-500 rounded-lg font-medium text-black hover:bg-yellow-600 transition disabled:opacity-50"
+          >
+            {loading ? "Updating..." : "Update Product"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}

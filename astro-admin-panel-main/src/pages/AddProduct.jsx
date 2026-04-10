@@ -1,0 +1,253 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+
+export default function AddProduct() {
+  const [categories, setCategories] = useState([]);
+  
+  const [formData, setFormData] = useState({
+    name: "",
+    categoryId: "",
+    price: "",
+    description: "",
+    benefits: "",
+    beadCount: "",
+    beadSize: "",
+    seedType: "",
+    threadType: "",
+    origin: "",
+    isTrending: false,
+    status: true
+  });
+  const [image, setImage] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/admin/ecomm/categories");
+      const result = await response.json();
+      if (result.status === "success") {
+        setCategories(result.data.filter(cat => cat.status === 1));
+      }
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const payload = new FormData();
+    payload.append("name", formData.name);
+    payload.append("category_id", formData.categoryId);
+    payload.append("price", formData.price);
+    payload.append("description", formData.description);
+    payload.append("benefits", formData.benefits);
+    payload.append("bead_count", formData.beadCount);
+    payload.append("bead_size", formData.beadSize);
+    payload.append("seed_type", formData.seedType);
+    payload.append("thread_type", formData.threadType);
+    payload.append("origin", formData.origin);
+    payload.append("is_trending", formData.isTrending ? 1 : 0);
+    payload.append("status", formData.status ? 1 : 0);
+    if (image) {
+      payload.append("image", image);
+    }
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/admin/ecomm/products/create", {
+        method: "POST",
+        body: payload,
+      });
+
+      const result = await response.json();
+      if (result.status === "success") {
+        alert("Product Added Successfully!");
+        navigate("/products");
+      } else {
+        alert("Error adding product");
+      }
+    } catch (error) {
+      console.error("Submit Error:", error);
+      alert("Failed to submit");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-white p-8 rounded-lg shadow-sm font-sans max-w-3xl mx-auto">
+      <h1 className="text-2xl font-bold mb-6">Add New Product</h1>
+      
+      <form onSubmit={handleSubmit} className="space-y-6">
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
+            <input
+              type="text"
+              required
+              className="w-full border px-4 py-2 rounded-lg"
+              placeholder="e.g. Citrine Energy Point"
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Select Category</label>
+            <select
+              required
+              className="w-full border px-4 py-2 rounded-lg bg-white"
+              value={formData.categoryId}
+              onChange={(e) => setFormData({...formData, categoryId: e.target.value})}
+            >
+              <option value="">-- Choose Category --</option>
+              {categories.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Price ($)</label>
+            <input
+              type="number"
+              step="0.01"
+              required
+              className="w-full border px-4 py-2 rounded-lg"
+              placeholder="0.00"
+              value={formData.price}
+              onChange={(e) => setFormData({...formData, price: e.target.value})}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Product Image</label>
+            <input
+              type="file"
+              accept="image/*"
+              className="w-full border px-4 py-2 rounded-lg"
+              onChange={(e) => setImage(e.target.files[0])}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
+            <textarea
+              rows="3"
+              className="w-full border px-4 py-2 rounded-lg"
+              placeholder="Product details..."
+              value={formData.description}
+              onChange={(e) => setFormData({...formData, description: e.target.value})}
+            ></textarea>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Benefits (Optional)</label>
+            <textarea
+              rows="3"
+              className="w-full border px-4 py-2 rounded-lg"
+              placeholder="Product benefits..."
+              value={formData.benefits}
+              onChange={(e) => setFormData({...formData, benefits: e.target.value})}
+            ></textarea>
+          </div>
+        </div>
+
+        <div className="border-t pt-4">
+          <h3 className="text-lg font-bold mb-4">Specifications (Optional)</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Bead Count</label>
+              <input
+                type="text"
+                className="w-full border px-4 py-2 rounded-lg"
+                placeholder="e.g. 108 + 1"
+                value={formData.beadCount}
+                onChange={(e) => setFormData({...formData, beadCount: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Bead Size</label>
+              <input
+                type="text"
+                className="w-full border px-4 py-2 rounded-lg"
+                placeholder="e.g. 8mm"
+                value={formData.beadSize}
+                onChange={(e) => setFormData({...formData, beadSize: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Seed Type</label>
+              <input
+                type="text"
+                className="w-full border px-4 py-2 rounded-lg"
+                placeholder="e.g. 5 Mukhi"
+                value={formData.seedType}
+                onChange={(e) => setFormData({...formData, seedType: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Thread Type</label>
+              <input
+                type="text"
+                className="w-full border px-4 py-2 rounded-lg"
+                placeholder="e.g. Nylon"
+                value={formData.threadType}
+                onChange={(e) => setFormData({...formData, threadType: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Origin</label>
+              <input
+                type="text"
+                className="w-full border px-4 py-2 rounded-lg"
+                placeholder="e.g. Nepal"
+                value={formData.origin}
+                onChange={(e) => setFormData({...formData, origin: e.target.value})}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-6">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="isTrending"
+              checked={formData.isTrending}
+              onChange={(e) => setFormData({...formData, isTrending: e.target.checked})}
+              className="w-4 h-4 cursor-pointer"
+            />
+            <label htmlFor="isTrending" className="font-medium cursor-pointer text-gray-700">Trending (Show on Homepage)</label>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="status"
+              checked={formData.status}
+              onChange={(e) => setFormData({...formData, status: e.target.checked})}
+              className="w-4 h-4 cursor-pointer"
+            />
+            <label htmlFor="status" className="font-medium cursor-pointer text-gray-700">Active Status</label>
+          </div>
+        </div>
+
+        <button 
+          type="submit" 
+          disabled={loading}
+          className="w-full bg-yellow-500 text-black py-3 rounded-lg font-bold hover:bg-yellow-600 transition disabled:opacity-50"
+        >
+          {loading ? "Adding..." : "Add Product"}
+        </button>
+      </form>
+    </div>
+  );
+}

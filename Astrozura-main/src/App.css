@@ -1,0 +1,18 @@
+
+.custom-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: white;
+  cursor: pointer;
+}
+
+.custom-select option:checked {
+  background-color: #F59E0B !important;
+  color: white;
+}
+
+.custom-select:focus {
+  border-color: #F59E0B;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
+}
