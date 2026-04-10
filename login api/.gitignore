@@ -18,7 +18,7 @@
 /public/storage
 /storage/*.key
 /storage/pail
-/vendor
+# /vendor (Removed per user request to push it)
 Homestead.json
 Homestead.yaml
 Thumbs.db
