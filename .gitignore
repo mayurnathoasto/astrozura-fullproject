@@ -1,0 +1,21 @@
+# Dependency folders
+node_modules/
+
+# Environments and Secrets
+.env
+.env.backup
+.env.production
+*.key
+
+# Build and Logs
+build/
+dist/
+npm-debug.log*
+yarn-debug.log*
+storage/*.log
+
+# IDE and System files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
