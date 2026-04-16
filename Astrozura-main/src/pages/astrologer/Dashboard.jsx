@@ -23,10 +23,16 @@ function getNameParts(fullName = "") {
   };
 }
 
+function resolveImageUrl(baseUrl, path) {
+  if (!path) return "";
+  if (path.startsWith("http")) return path;
+  return `${baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
 function ProfileManagementForm({ user }) {
   const { setUser } = useAuth();
   const nameParts = getNameParts(user?.name);
-  const backendBaseUrl = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api").replace("/api", "");
+  const backendBaseUrl = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api").replace(/\/index\.php\/api$|\/api$/, "");
 
   const [formData, setFormData] = useState({
     firstName: nameParts.firstName,
@@ -44,7 +50,7 @@ function ProfileManagementForm({ user }) {
   });
   const [profilePreview, setProfilePreview] = useState(
     user?.astrologer_detail?.profile_image
-      ? `${backendBaseUrl}${user.astrologer_detail.profile_image}`
+      ? resolveImageUrl(backendBaseUrl, user.astrologer_detail.profile_image)
       : ""
   );
   const [loading, setLoading] = useState(false);
@@ -115,7 +121,7 @@ function ProfileManagementForm({ user }) {
         }));
 
         if (data.user?.astrologer_detail?.profile_image) {
-          setProfilePreview(`${backendBaseUrl}${data.user.astrologer_detail.profile_image}`);
+          setProfilePreview(resolveImageUrl(backendBaseUrl, data.user.astrologer_detail.profile_image));
         }
 
         setMessage({ type: "success", text: "Profile updated successfully." });

@@ -95,6 +95,23 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const setAuthFromOAuth = async (newToken) => {
+    localStorage.setItem('auth_token', newToken);
+    setToken(newToken);
+    try {
+      const response = await api.get('/user');
+      if (response.data.success) {
+        setUser(response.data.user);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        return true;
+      }
+    } catch (error) {
+      console.error('OAuth user fetch failed', error);
+      logout();
+    }
+    return false;
+  };
+
   const logout = async () => {
     try {
       if (localStorage.getItem('auth_token')) {
@@ -116,7 +133,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, sendOtp, loginWithOtp, registerWithPassword, loginWithPassword, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, token, loading, sendOtp, loginWithOtp, registerWithPassword, loginWithPassword, setAuthFromOAuth, logout, updateUser }}>
       {!loading && children}
     </AuthContext.Provider>
   );

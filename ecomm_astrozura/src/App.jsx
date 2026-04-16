@@ -14,6 +14,7 @@ import SupportPage from "./pages/SupportPage";
 import RefundPolicy from "./pages/RefundPolicy";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import OAuthCallback from "./pages/OAuthCallback";
 import DashboardLayout from "./pages/Dashboard/DashboardLayout";
 import DashboardHome from "./pages/Dashboard/DashboardHome";
 import UserProfile from "./pages/Dashboard/UserProfile";
@@ -45,6 +46,7 @@ function AppContent() {
         <Route path="/refund-policy" element={<RefundPolicy />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/oauth/callback" element={<OAuthCallback />} />
 
         {/* USER DASHBOARD ROUTES */}
         <Route path="/dashboard" element={<DashboardLayout />}>

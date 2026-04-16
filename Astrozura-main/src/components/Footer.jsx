@@ -1,12 +1,30 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Globe, Instagram, Phone, Youtube } from "lucide-react";
 import vedic from "../assets/vedic-astrology.png";
 import { useAuth } from "../context/AuthContext";
+
+const servicesLinks = [
+  { label: "Astro Zura Panchang", to: "/panchang" },
+  { label: "Birth Chart", to: "/kundli" },
+  { label: "Daily Horoscope", to: "/rashifal" },
+  { label: "Compatibility", to: "/matching" },
+  { label: "Our Astrologers", to: "/astrologers" },
+  { label: "Pooja / Anusthan", to: "/rituals" },
+];
+
+const companyLinks = [
+  { label: "About Us", to: "/about-us" },
+  { label: "Contact Support", to: "/contact-support" },
+  { label: "Privacy Policy", to: "/privacy-policy" },
+  { label: "Terms & Conditions", to: "/terms-and-conditions" },
+];
 
 export default function Footer() {
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState("");
   const { user } = useAuth();
+  const socialLinks = [Globe, Instagram, Phone, Youtube];
 
   const handleSend = () => {
     if (!email) {
@@ -19,122 +37,102 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-[#1E3557] text-white mt-2">
+    <footer className="mt-2 bg-[#1E3557] text-white">
       {msg && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 bg-[#D4A73C] px-6 py-3 rounded-lg text-sm shadow z-50">
+        <div className="fixed left-1/2 top-6 z-50 -translate-x-1/2 rounded-lg bg-[#D4A73C] px-6 py-3 text-sm shadow">
           {msg}
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-6 py-14 grid md:grid-cols-4 gap-10">
+      <div className="mx-auto grid max-w-7xl gap-10 px-6 py-14 md:grid-cols-4">
+        <div className="flex flex-col items-center text-center">
+          <div className="flex h-16 items-center justify-center rounded-2xl bg-white px-6 shadow-md md:h-20">
+            <img src={vedic} alt="AstroZura Logo" className="h-[150%] w-full object-contain" />
+          </div>
 
-       <div className="flex flex-col items-center text-center">
-<div className="bg-white rounded-2xl h-16 md:h-20 px-6 shadow-md flex items-center justify-center">
-  <img
-    src={vedic}
-    alt="AstroZura Logo"
-    className="h-[150%] w-full object-contain"
-  />
-</div>
+          <p className="mt-5 max-w-xs text-sm leading-relaxed text-gray-300">
+            Bringing celestial wisdom to your fingertips. AstroZura connects
+            you with the world's most gifted astrologers and spiritual advisors.
+          </p>
 
-  <p className="text-sm text-gray-300 mt-5 leading-relaxed max-w-xs">
-    Bringing celestial wisdom to your fingertips. AstroZura connects
-    you with the world's most gifted astrologers and spiritual advisors.
-  </p>
-
-  <div className="flex gap-3 mt-5">
-    {["🌐", "📷", "☎️", "🎬"].map((icon, i) => (
-      <div
-        key={i}
-        className="w-9 h-9 bg-[#2C4870] hover:bg-[#D4A73C] transition rounded-full flex items-center justify-center cursor-pointer"
-      >
-        {icon}
-      </div>
-    ))}
-  </div>
-</div>
-    
-        <div>
-          <h3 className="font-semibold mb-4 text-lg">Services</h3>
-          <ul className="space-y-2 text-sm text-gray-300">
-            {[
-              "Free Daily Horoscope",
-              "Kundli Matching",
-              "Talk to Astrologer",
-              "Chat with Astrologer"
-            ].map((item, i) => (
-              <li
-                key={i}
-                className="hover:text-[#D4A73C] cursor-pointer transition"
+          <div className="mt-5 flex gap-3">
+            {socialLinks.map((Icon, index) => (
+              <div
+                key={index}
+                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-[#2C4870] transition hover:bg-[#D4A73C]"
               >
-                {item}
+                <Icon size={16} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="mb-4 text-lg font-semibold">Services</h3>
+          <ul className="space-y-2 text-sm text-gray-300">
+            {servicesLinks.map((item) => (
+              <li key={item.to}>
+                <Link to={item.to} className="transition hover:text-[#D4A73C]">
+                  {item.label}
+                </Link>
               </li>
             ))}
           </ul>
         </div>
 
         <div>
-          <h3 className="font-semibold mb-4 text-lg">Company</h3>
+          <h3 className="mb-4 text-lg font-semibold">Company</h3>
           <ul className="space-y-2 text-sm text-gray-300">
-            {[
-              "About Us",
-              "Contact Support",
-              "Privacy Policy",
-              "Terms of Service"
-            ].map((item, i) => (
-              <li
-                key={i}
-                className="hover:text-[#D4A73C] cursor-pointer transition"
-              >
-                {item}
+            {companyLinks.map((item) => (
+              <li key={item.to}>
+                <Link to={item.to} className="transition hover:text-[#D4A73C]">
+                  {item.label}
+                </Link>
               </li>
             ))}
           </ul>
         </div>
 
         <div>
-          <h3 className="font-semibold mb-4 text-lg">Newsletter</h3>
-          <p className="text-sm text-gray-300 mb-4">
+          <h3 className="mb-4 text-lg font-semibold">Newsletter</h3>
+          <p className="mb-4 text-sm text-gray-300">
             Get daily cosmic insights delivered to your inbox.
           </p>
 
           <input
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(event) => setEmail(event.target.value)}
             placeholder="Your email address"
-            className="w-full bg-[#223E63] px-4 py-3 rounded-md text-sm text-white placeholder-gray-400 outline-none mb-3 focus:ring-2 focus:ring-[#D4A73C]"
+            className="mb-3 w-full rounded-md bg-[#223E63] px-4 py-3 text-sm text-white outline-none placeholder-gray-400 focus:ring-2 focus:ring-[#D4A73C]"
           />
 
           <button
             onClick={handleSend}
-            className="w-full bg-[#d8ba4a] py-3 rounded-md text-sm font-semibold hover:bg-[#d8ba4a] transition"
+            className="w-full rounded-md bg-[#d8ba4a] py-3 text-sm font-semibold transition hover:bg-[#d8ba4a]"
           >
             Subscribe
           </button>
         </div>
       </div>
 
-      {/* BOTTOM */}
       <div className="border-t border-[#2C4870] py-6">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center text-sm text-gray-300">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between px-6 text-sm text-gray-300 md:flex-row">
+          <p>(c) 2024 AstroZura Inc. All cosmic rights reserved.</p>
 
-          <p>© 2024 AstroZura Inc. All cosmic rights reserved.</p>
-
-          <div className="flex gap-6 mt-3 md:mt-0 items-center">
+          <div className="mt-3 flex items-center gap-6 md:mt-0">
             {!user && (
-              <Link to="/astrologer/login" className="text-gray-300 hover:text-[#D4A73C] transition">
+              <Link to="/astrologer/login" className="text-gray-300 transition hover:text-[#D4A73C]">
                 Astrologer Login
               </Link>
             )}
-            <span className="cursor-pointer hover:text-[#D4A73C] transition">
+            <Link to="/terms-and-conditions" className="transition hover:text-[#D4A73C]">
               Disclaimer
-            </span>
-            <span className="cursor-pointer hover:text-[#D4A73C] transition">
+            </Link>
+            <Link to="/rituals" className="transition hover:text-[#D4A73C]">
               Sitemap
-            </span>
+            </Link>
           </div>
-
         </div>
       </div>
     </footer>

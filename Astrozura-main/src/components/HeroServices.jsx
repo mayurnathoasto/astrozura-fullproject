@@ -1,56 +1,159 @@
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import users from "../assets/avatar-users.jpg";
+import { downloadFreeKundliPdf, searchLocation } from "../api/prokeralaApi";
+
+const formatDateForApi = (value) => {
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
+    return "";
+  }
+
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const parseBlobError = async (blob) => {
+  try {
+    const text = await blob.text();
+    const parsed = JSON.parse(text);
+    return parsed?.message || "Unable to generate the kundli PDF.";
+  } catch {
+    return "Unable to generate the kundli PDF.";
+  }
+};
 
 export default function HeroServices() {
-  const [showMsg, setShowMsg] = useState(false);
-  const [birthDate, setBirthDate] = useState(null);
-  const [gender, setGender] = useState("");
-  const [openGender, setOpenGender] = useState(false);
+  const sectionRef = useRef(null);
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [searchingLocation, setSearchingLocation] = useState(false);
+  const [locationResults, setLocationResults] = useState([]);
+  const [form, setForm] = useState({
+    name: "",
+    gender: "",
+    birthDate: null,
+    timeOfBirth: "",
+    placeOfBirth: "",
+    coordinates: "",
+  });
 
-  const dropdownRef = useRef();
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setOpenGender(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    if (!message) {
+      return undefined;
+    }
 
-  const showNotification = () => {
-    setShowMsg(true);
-    setTimeout(() => setShowMsg(false), 2000);
-  };
+    const timeoutId = window.setTimeout(() => setMessage(""), 3200);
+    return () => window.clearTimeout(timeoutId);
+  }, [message]);
 
   const handleFreeKundliClick = () => {
-    showNotification();
-    const section = document.getElementById("kundliForm");
-    section?.scrollIntoView({ behavior: "smooth" });
+    sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
-  const handleCreateKundli = () => {
-    showNotification();
+  const handleFieldChange = (field, value) => {
+    setForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const handlePlaceChange = async (value) => {
+    setForm((current) => ({
+      ...current,
+      placeOfBirth: value,
+      coordinates: "",
+    }));
+
+    if (value.trim().length < 3) {
+      setLocationResults([]);
+      return;
+    }
+
+    try {
+      setSearchingLocation(true);
+      const response = await searchLocation(value.trim());
+      setLocationResults(response?.data || []);
+    } catch (error) {
+      console.error("Location search failed", error);
+      setLocationResults([]);
+    } finally {
+      setSearchingLocation(false);
+    }
+  };
+
+  const handleLocationSelect = (item) => {
+    setForm((current) => ({
+      ...current,
+      placeOfBirth: item.name,
+      coordinates: `${item.coordinates.latitude},${item.coordinates.longitude}`,
+    }));
+    setLocationResults([]);
+  };
+
+  const handleCreateKundli = async () => {
+    if (!form.name || !form.gender || !form.birthDate || !form.timeOfBirth || !form.placeOfBirth) {
+      setMessage("Complete all kundli details before generating the PDF.");
+      return;
+    }
+
+    if (!form.coordinates) {
+      setMessage("Choose the place of birth from the search dropdown.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setMessage("Generating your free kundli PDF...");
+
+      const response = await downloadFreeKundliPdf({
+        name: form.name,
+        gender: form.gender,
+        date_of_birth: formatDateForApi(form.birthDate),
+        time_of_birth: form.timeOfBirth,
+        place_of_birth: form.placeOfBirth,
+        coordinates: form.coordinates,
+      });
+
+      if ((response.headers["content-type"] || "").includes("application/json")) {
+        setMessage(await parseBlobError(response.data));
+        return;
+      }
+
+      const downloadUrl = window.URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = `${form.name.trim().replace(/\s+/g, "-").toLowerCase() || "free-kundli"}-kundli.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+      setMessage("Kundli PDF downloaded successfully.");
+    } catch (error) {
+      const blob = error?.response?.data;
+      if (blob instanceof Blob) {
+        setMessage(await parseBlobError(blob));
+      } else {
+        setMessage(error?.response?.data?.message || "Unable to generate the kundli PDF.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="bg-[#FAF7F2] min-h-screen font-sans">
-
-      {/* Notification */}
-      {showMsg && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 bg-[#d8ba4a] text-white px-6 py-3 rounded-lg shadow-lg z-50 text-sm">
-          Kundli Generating...
+      {message && (
+        <div className="fixed top-5 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-[#d8ba4a] px-6 py-3 text-sm text-white shadow-lg">
+          {message}
         </div>
       )}
 
       <div className="max-w-[1200px] mx-auto px-4 md:px-10">
-
         <section className="py-10 md:py-16">
           <div className="grid md:grid-cols-2 gap-10 md:gap-12 items-center">
-
-            {/* LEFT */}
             <div className="text-center md:text-left">
               <p className="text-xs md:text-sm text-[#D4A73C] font-semibold mb-3">
                 AI POWERED ASTROLOGY
@@ -90,85 +193,95 @@ export default function HeroServices() {
               </div>
             </div>
 
-            {/* RIGHT FORM */}
             <div
               id="kundliForm"
+              ref={sectionRef}
               className="bg-white p-6 md:p-8 rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-gray-100 w-full max-w-md mx-auto"
             >
               <h3 className="font-semibold text-[#1F2937] mb-5 text-center md:text-left">
-                ✨ Free Kundli Details
+                Free Kundli Details
               </h3>
 
               <input
+                value={form.name}
+                onChange={(event) => handleFieldChange("name", event.target.value)}
                 className="border border-gray-200 p-3 w-full mb-3 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#D4A73C]"
                 placeholder="Full Name"
               />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                <select
+                  value={form.gender}
+                  onChange={(event) => handleFieldChange("gender", event.target.value)}
+                  className="border border-gray-200 p-3 rounded-xl text-sm bg-white outline-none focus:ring-2 focus:ring-[#D4A73C]"
+                >
+                  <option value="">Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
 
-                {/* GENDER DROPDOWN */}
-                <div className="relative" ref={dropdownRef}>
-                  <div
-                    onClick={() => setOpenGender((prev) => !prev)}
-                    className="border border-gray-200 p-3 rounded-xl text-sm cursor-pointer flex justify-between items-center bg-white"
-                  >
-                    <span className={gender ? "text-black" : "text-gray-400"}>
-                      {gender || "Gender"}
-                    </span>
-                    <span className={`transition ${openGender ? "rotate-180" : ""}`}>
-                      ▼
-                    </span>
-                  </div>
-
-                  {openGender && (
-                    <div className="absolute w-full bg-white border mt-1 rounded-xl shadow-lg z-20 overflow-hidden">
-                      {["Male", "Female"].map((item) => (
-                        <div
-                          key={item}
-                          onClick={() => {
-                            setGender(item);
-                            setOpenGender(false);
-                          }}
-                          className="px-4 py-2 cursor-pointer transition hover:bg-[#d8b14a] hover:text-white"
-                        >
-                          {item}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* DATE */}
                 <DatePicker
-                  selected={birthDate}
-                  onChange={(date) => setBirthDate(date)}
+                  selected={form.birthDate}
+                  onChange={(date) => handleFieldChange("birthDate", date)}
                   placeholderText="Birth Date"
+                  dateFormat="dd/MM/yyyy"
+                  maxDate={new Date()}
                   className="border border-gray-200 p-3 w-full rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#D4A73C]"
                 />
               </div>
 
               <input
+                type="time"
+                value={form.timeOfBirth}
+                onChange={(event) => handleFieldChange("timeOfBirth", event.target.value)}
                 className="border border-gray-200 p-3 w-full mb-3 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#D4A73C]"
-                placeholder="Time of Birth"
               />
 
-              <input
-                className="border border-gray-200 p-3 w-full mb-4 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#D4A73C]"
-                placeholder="Place of Birth"
-              />
+              <div className="relative mb-2">
+                <input
+                  value={form.placeOfBirth}
+                  onChange={(event) => void handlePlaceChange(event.target.value)}
+                  className="border border-gray-200 p-3 w-full rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#D4A73C]"
+                  placeholder="Place of Birth"
+                />
+
+                {searchingLocation && (
+                  <div className="absolute right-3 top-3.5 h-4 w-4 animate-spin rounded-full border-b-2 border-[#D4A73C]"></div>
+                )}
+
+                {locationResults.length > 0 && (
+                  <div className="absolute z-20 mt-2 max-h-56 w-full overflow-y-auto rounded-2xl border border-gray-100 bg-white shadow-xl">
+                    {locationResults.map((item, index) => (
+                      <button
+                        key={`${item.name}-${index}`}
+                        type="button"
+                        onClick={() => handleLocationSelect(item)}
+                        className="block w-full border-b border-gray-100 px-4 py-3 text-left text-sm text-[#1F2937] hover:bg-[#FAF7F2] last:border-b-0"
+                      >
+                        {item.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <p className="mb-4 text-xs text-gray-500">
+                Search and select the birthplace to capture the correct latitude and longitude.
+              </p>
 
               <button
-                onClick={handleCreateKundli}
-                className="bg-[#d8b14a] text-white w-full py-3 rounded-xl hover:bg-[#c7926a] transition font-medium shadow-md"
+                type="button"
+                disabled={loading}
+                onClick={() => void handleCreateKundli()}
+                className="bg-[#d8b14a] text-white w-full py-3 rounded-xl hover:bg-[#c7926a] transition font-medium shadow-md disabled:opacity-60"
               >
-                Create Your Free Kundli
+                {loading ? "Generating Kundli..." : "Create Your Free Kundli"}
               </button>
             </div>
-
           </div>
         </section>
 
-        {/* STATS */}
         <div className="pb-10">
           <div className="bg-gradient-to-r from-[#c7926a] to-[#e0b95a] text-black py-7 rounded-3xl shadow-xl">
             <div className="grid grid-cols-2 md:grid-cols-4 text-center gap-y-8 gap-x-4">
@@ -194,7 +307,6 @@ export default function HeroServices() {
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );

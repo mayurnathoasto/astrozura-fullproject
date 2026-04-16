@@ -67,3 +67,15 @@ export const getPanchang = async (datetime, coordinates, ayanamsa = 1) => {
     throw error;
   }
 };
+
+export const downloadFreeKundliPdf = async (payload) => {
+  try {
+    const response = await api.post('/prokerala/kundli/free-pdf', payload, {
+      responseType: 'blob'
+    });
+    return response;
+  } catch (error) {
+    console.error("Error downloading free kundli PDF:", error);
+    throw error;
+  }
+};

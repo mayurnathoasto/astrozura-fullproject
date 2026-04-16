@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { apiRequest } from "../lib/api";
 
 export default function AddCategory() {
   const [name, setName] = useState("");
@@ -20,12 +21,11 @@ export default function AddCategory() {
     }
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/admin/ecomm/categories/create", {
+      const result = await apiRequest("/admin/ecomm/categories/create", {
         method: "POST",
         body: formData,
       });
 
-      const result = await response.json();
       if (result.status === "success") {
         alert("Category Added Successfully!");
         navigate("/categories");

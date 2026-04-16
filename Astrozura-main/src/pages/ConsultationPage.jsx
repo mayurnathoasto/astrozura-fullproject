@@ -25,7 +25,7 @@ const getImageUrl = (path) => {
   if (!path) return avatar;
   if (path.startsWith("http")) return path;
   const baseUrl = import.meta.env.VITE_API_BASE_URL
-    ? import.meta.env.VITE_API_BASE_URL.replace("/api", "")
+    ? import.meta.env.VITE_API_BASE_URL.replace(/\/index\.php\/api$|\/api$/, "")
     : "http://localhost:8000";
   return `${baseUrl}${path}`;
 };

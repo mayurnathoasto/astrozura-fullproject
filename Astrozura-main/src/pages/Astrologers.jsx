@@ -25,6 +25,7 @@ const [type, setType] = useState("Consultation");
 const [search, setSearch] = useState("");
 const [showMsg, setShowMsg] = useState("");
 const [activePage, setActivePage] = useState(1);
+const [searching, setSearching] = useState(false);
 
 const handleClick = (message) => {
   setShowMsg("");
@@ -43,10 +44,13 @@ const [astrologersList, setAstrologersList] = useState([]);
 const [loading, setLoading] = useState(true);
 
 useEffect(() => {
-  const fetchAstrologers = async () => {
+  const timeoutId = window.setTimeout(async () => {
     try {
       const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-      const response = await fetch(`${apiUrl}/astrologers`);
+      setSearching(true);
+      const params = new URLSearchParams();
+      if (search.trim()) params.set("q", search.trim());
+      const response = await fetch(`${apiUrl}/astrologers?${params.toString()}`);
       const data = await response.json();
       if (data.success) {
         setAstrologersList(data.astrologers);
@@ -55,14 +59,12 @@ useEffect(() => {
       console.error("Failed to fetch astrologers", error);
     } finally {
       setLoading(false);
+      setSearching(false);
     }
-  };
-  fetchAstrologers();
-}, []);
+  }, 250);
 
-const filteredAstrologers = astrologersList.filter((astro) =>
-  astro.name?.toLowerCase().includes(search.toLowerCase())
-);
+  return () => window.clearTimeout(timeoutId);
+}, [search]);
 
 const featuredExpert = astrologersList.find(a => a.astrologer_detail?.is_featured) || astrologersList[0];
 const featuredDetails = featuredExpert?.astrologer_detail || {};
@@ -71,7 +73,7 @@ const getImageUrl = (path) => {
   if (!path) return avatar;
   if (path.startsWith('http')) return path;
   const baseUrl = import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace('/api', '') : 'http://localhost:8000';
-  return `${baseUrl}${path}`;
+  return `${baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
 };
 
 const filters = [
@@ -208,11 +210,14 @@ return (
         {/* ASTROLOGERS GRID */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-[#1E3557]">Top Rated Astrologers</h2>
-          <p className="text-sm text-gray-400 font-medium">{filteredAstrologers.length} Astrologers</p>
+          <div className="text-right">
+            <p className="text-sm text-gray-400 font-medium">{astrologersList.length} Astrologers</p>
+            {searching && <p className="text-xs text-[#D4A73C] font-medium mt-1">Searching...</p>}
+          </div>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAstrologers.map((astro) => {
+          {astrologersList.map((astro) => {
             const details = astro.astrologer_detail || {};
 
             return (
@@ -223,7 +228,7 @@ return (
 
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-[#1E3557] text-base truncate">{astro.name}</h3>
-                    <p className="text-xs text-gray-500 mt-0.5">{details.experience_years || 0} Exp · {details.languages || 'N/A'}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{details.experience_years || 0} Exp | {details.languages || 'N/A'}</p>
                     <span className="inline-block text-[10px] font-semibold text-[#D4A73C] bg-[#FFF8ED] border border-[#F3E7D3] px-2 py-0.5 rounded-md mt-1 truncate max-w-full">
                       {details.specialities || 'Astrology'}
                     </span>
@@ -238,11 +243,11 @@ return (
                 <div className="grid grid-cols-2 gap-3 mt-auto">
                   <div className="bg-[#f8f9fa] p-3 rounded-xl text-center border border-gray-100">
                     <p className="text-[10px] text-gray-400 font-bold tracking-wider uppercase mb-0.5">Chat</p>
-                    <p className="font-bold text-[#1E3557] text-sm">₹{details.chat_price || 0}/min</p>
+                    <p className="font-bold text-[#1E3557] text-sm">Rs {details.chat_price || 0}/min</p>
                   </div>
                   <div className="bg-[#f8f9fa] p-3 rounded-xl text-center border border-gray-100">
                     <p className="text-[10px] text-gray-400 font-bold tracking-wider uppercase mb-0.5">Call</p>
-                    <p className="font-bold text-[#1E3557] text-sm">₹{details.call_price || 0}/min</p>
+                    <p className="font-bold text-[#1E3557] text-sm">Rs {details.call_price || 0}/min</p>
                   </div>
                 </div>
 
@@ -264,12 +269,18 @@ return (
             );
           })}
         </div>
+        {!astrologersList.length && (
+          <div className="rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-14 text-center mt-8">
+            <p className="text-lg font-bold text-[#1E3557]">No astrologers match this search.</p>
+            <p className="mt-2 text-sm text-gray-500">Try another name, speciality, or language.</p>
+          </div>
+        )}
       </>
       )}
 
       {/* PAGINATION */}
       <div className="flex justify-center mt-12 gap-2 flex-wrap">
-        <button className="px-4 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50 transition">‹</button>
+        <button className="px-4 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50 transition">Prev</button>
         {[1, 2, 3, 4, 5, 6].map(num => (
           <button
             key={num}
@@ -283,7 +294,7 @@ return (
             {num}
           </button>
         ))}
-        <button className="px-4 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50 transition">›</button>
+        <button className="px-4 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50 transition">Next</button>
       </div>
 
     </section>

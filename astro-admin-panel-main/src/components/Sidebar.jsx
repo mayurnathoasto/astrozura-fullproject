@@ -14,7 +14,8 @@ X,
 ShoppingCart,
 Tags,
 BadgeCheck,
-Crown
+Crown,
+BookOpen
 } from "lucide-react";
 
 function Sidebar({ isOpen, onClose }) {
@@ -37,6 +38,7 @@ const menu = [
 const ecommMenu = [
 { name:"Categories", icon:Tags, path:"/categories"},
 { name:"Products", icon:ShoppingCart, path:"/products"},
+{ name:"Rituals", icon:BookOpen, path:"/rituals"},
 ]
 
 const subscriptionMenu = [

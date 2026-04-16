@@ -16,7 +16,7 @@ export default function OAuthCallback() {
         const success = await setAuthFromOAuth(token);
         if (success) {
           if (isNew) {
-            navigate("/profile-setup", { replace: true });
+            navigate("/user-profile", { replace: true });
           } else {
             navigate("/", { replace: true });
           }

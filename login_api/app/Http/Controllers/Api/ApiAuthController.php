@@ -3,59 +3,66 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Models\Booking;
+use App\Models\Category;
+use App\Models\Product;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Laravel\Socialite\Facades\Socialite;
 
 class ApiAuthController extends Controller
 {
-    /**
-     * Redirect to Google OAuth.
-     */
-    public function redirectToGoogle()
+    public function redirectToGoogle(Request $request)
     {
-        return Socialite::driver('google')->stateless()->redirect();
+        $frontend = $request->query('frontend', 'main');
+
+        return Socialite::driver('google')
+            ->stateless()
+            ->with(['state' => $frontend])
+            ->redirect();
     }
 
-    /**
-     * Google OAuth Callback
-     */
-    public function handleGoogleCallback()
+    public function handleGoogleCallback(Request $request)
     {
+        $frontend = $request->query('state', 'main');
+        $frontendUrl = $this->resolveFrontendUrl($frontend);
+
         try {
             $googleUser = Socialite::driver('google')->stateless()->user();
-            
+
             $user = User::where('email', $googleUser->email)->first();
-            
+
             if (!$user) {
                 $user = User::create([
                     'name' => $googleUser->name,
                     'email' => $googleUser->email,
                     'role' => 'user',
                     'is_profile_complete' => false,
+                    'provider' => 'google',
+                    'provider_id' => $googleUser->id,
+                    'provider_token' => $googleUser->token,
+                ]);
+            } else {
+                $user->update([
+                    'provider' => 'google',
+                    'provider_id' => $googleUser->id,
+                    'provider_token' => $googleUser->token,
                 ]);
             }
 
             $token = $user->createToken('api-token')->plainTextToken;
-
-            // Redirect back to frontend
-            $frontendUrl = 'http://localhost:5173';
             $isNew = !$user->is_profile_complete ? 'true' : 'false';
-            
-            return redirect($frontendUrl . '/oauth/callback?token=' . $token . '&is_new=' . $isNew);
 
+            return redirect($frontendUrl . '/oauth/callback?token=' . $token . '&is_new=' . $isNew);
         } catch (\Exception $e) {
-            return redirect('http://localhost:5173/login?error=google_auth_failed');
+            return redirect($frontendUrl . '/login?error=google_auth_failed');
         }
     }
-    /**
-     * Send OTP to the user (mobile/email).
-     * Bypasses registration by creating the user if they don't exist.
-     */
+
     public function sendOtp(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -69,13 +76,11 @@ class ApiAuthController extends Controller
         $identifier = $request->identifier;
         $isEmail = filter_var($identifier, FILTER_VALIDATE_EMAIL);
 
-        // Bypass registration: Create user if not exists
         $user = User::firstOrCreate(
             [$isEmail ? 'email' : 'phone' => $identifier],
-            ['name' => 'User ' . Str::random(5)]
+            ['name' => 'User ' . Str::random(5), 'role' => 'user']
         );
 
-        // Generate Dev OTP
         $otp = rand(100000, 999999);
         $user->otp = $otp;
         $user->otp_expires_at = now()->addMinutes(60);
@@ -85,13 +90,10 @@ class ApiAuthController extends Controller
             'success' => true,
             'message' => 'OTP generated successfully (Dev OTP)',
             'dev_otp' => $otp,
-            'identifier' => $identifier
+            'identifier' => $identifier,
         ]);
     }
 
-    /**
-     * Log in the user using OTP and issue a Sanctum token.
-     */
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -104,21 +106,17 @@ class ApiAuthController extends Controller
         }
 
         $identifier = $request->identifier;
-        $isEmail = filter_var($identifier, FILTER_VALIDATE_EMAIL);
-        $field = $isEmail ? 'email' : 'phone';
-
+        $field = filter_var($identifier, FILTER_VALIDATE_EMAIL) ? 'email' : 'phone';
         $user = User::where($field, $identifier)->first();
 
         if (!$user || $user->otp != $request->otp || now()->greaterThan($user->otp_expires_at)) {
             return response()->json(['success' => false, 'message' => 'Invalid or expired OTP.'], 401);
         }
 
-        // Clear OTP after success
         $user->otp = null;
         $user->otp_expires_at = null;
         $user->save();
 
-        // Create Sanctum Token
         $token = $user->createToken('api-token')->plainTextToken;
 
         return response()->json([
@@ -126,13 +124,10 @@ class ApiAuthController extends Controller
             'message' => 'Logged in successfully',
             'token' => $token,
             'user' => $user,
-            'is_new_user' => !$user->is_profile_complete
+            'is_new_user' => !$user->is_profile_complete,
         ]);
     }
 
-    /**
-     * Register a new user with standard email/password.
-     */
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -161,13 +156,10 @@ class ApiAuthController extends Controller
             'message' => 'Registered successfully',
             'token' => $token,
             'user' => $user,
-            'is_new_user' => true
+            'is_new_user' => true,
         ]);
     }
 
-    /**
-     * Standard Email/Password login.
-     */
     public function loginWithPassword(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -191,13 +183,10 @@ class ApiAuthController extends Controller
             'message' => 'Logged in successfully',
             'token' => $token,
             'user' => $user,
-            'is_new_user' => !$user->is_profile_complete
+            'is_new_user' => !$user->is_profile_complete,
         ]);
     }
 
-    /**
-     * Specialized Astrologer Login
-     */
     public function astrologerLogin(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -214,8 +203,7 @@ class ApiAuthController extends Controller
         }
 
         $user = User::where('email', $request->email)->firstOrFail();
-        
-        // Strict role check
+
         if ($user->role !== 'astrologer') {
             Auth::logout();
             return response()->json(['success' => false, 'message' => 'Unauthorized Access. Astrologer account required.'], 403);
@@ -227,70 +215,231 @@ class ApiAuthController extends Controller
             'success' => true,
             'message' => 'Logged in as Astrologer successfully',
             'token' => $token,
-            'user' => $user
+            'user' => $user->load('astrologerDetail'),
         ]);
     }
 
-    /**
-     * Log out the user and revoke the current token.
-     */
-    public function logout(Request $request)
+    public function adminLogin(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $this->ensureAdminAccount();
+
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|string|email',
+            'password' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
+        }
+
+        if (!Auth::attempt($request->only('email', 'password'))) {
+            return response()->json(['success' => false, 'message' => 'Invalid email or password.'], 401);
+        }
+
+        $user = User::where('email', $request->email)->firstOrFail();
+
+        if ($user->role !== 'admin') {
+            Auth::logout();
+            return response()->json(['success' => false, 'message' => 'Unauthorized Access. Admin account required.'], 403);
+        }
+
+        $token = $user->createToken('admin-token')->plainTextToken;
 
         return response()->json([
             'success' => true,
-            'message' => 'Logged out successfully'
+            'message' => 'Logged in as Admin successfully',
+            'token' => $token,
+            'user' => $user,
         ]);
     }
 
-    /**
-     * Get the authenticated user details.
-     */
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()?->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Logged out successfully',
+        ]);
+    }
+
     public function user(Request $request)
     {
         return response()->json([
             'success' => true,
-            'user' => $request->user()->load('astrologerDetail')
+            'user' => $request->user()->load('astrologerDetail'),
         ]);
     }
 
-    /**
-     * Get all registered users (for Admin Panel)
-     */
     public function getAllUsers()
     {
         $users = User::where('role', 'user')->orderBy('created_at', 'desc')->get();
+
         return response()->json([
             'success' => true,
-            'users' => $users
+            'users' => $users,
         ]);
     }
 
-    /**
-     * Get Admin Dashboard Stats
-     */
     public function getAdminDashboardStats()
     {
         $totalUsers = User::where('role', 'user')->count();
         $totalAstrologers = User::where('role', 'astrologer')->count();
+        $totalBookings = Booking::count();
+        $revenue = Booking::where('payment_status', 'paid')->sum('amount');
 
-        // For Bookings and Revenue, we return hardcoded strings for now 
-        // since there's no DB table for them yet.
         return response()->json([
             'success' => true,
             'stats' => [
                 'total_users' => $totalUsers,
                 'total_astrologers' => $totalAstrologers,
-                'bookings' => 324,
-                'revenue' => '₹2,45,000'
-            ]
+                'bookings' => $totalBookings,
+                'revenue' => 'Rs ' . number_format((float) $revenue, 2),
+            ],
         ]);
     }
 
-    /**
-     * Create a new Astrologer (from Admin Panel)
-     */
+    public function getAdminProfile(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user || $user->role !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized Access. Admin account required.'], 403);
+        }
+
+        return response()->json([
+            'success' => true,
+            'user' => $user,
+        ]);
+    }
+
+    public function updateAdminProfile(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user || $user->role !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized Access. Admin account required.'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'firstName' => 'required|string|max:255',
+            'lastName' => 'nullable|string|max:255',
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'phone' => ['nullable', 'string', 'max:20', Rule::unique('users', 'phone')->ignore($user->id)],
+            'password' => 'nullable|string|min:6',
+            'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
+        }
+
+        $user->name = trim($request->firstName . ' ' . $request->lastName);
+        $user->email = $request->email;
+        $user->phone = $request->phone;
+
+        if ($request->filled('password')) {
+            $user->password = bcrypt($request->password);
+        }
+
+        if ($request->hasFile('profile_image')) {
+            if (!is_dir(public_path('uploads/admin-profiles'))) {
+                mkdir(public_path('uploads/admin-profiles'), 0755, true);
+            }
+            $imageName = time() . '-' . Str::slug(pathinfo($request->file('profile_image')->getClientOriginalName(), PATHINFO_FILENAME)) . '.' . $request->file('profile_image')->extension();
+            $request->file('profile_image')->move(public_path('uploads/admin-profiles'), $imageName);
+            $user->profile_image = '/uploads/admin-profiles/' . $imageName;
+        }
+
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Admin profile updated successfully',
+            'user' => $user->fresh(),
+        ]);
+    }
+
+    public function adminSearch(Request $request)
+    {
+        $term = trim((string) $request->query('q', ''));
+
+        if ($term === '') {
+            return response()->json(['success' => true, 'results' => []]);
+        }
+
+        $like = '%' . $term . '%';
+        $results = collect();
+
+        $results = $results->merge(
+            Booking::query()
+                ->where(function ($query) use ($like) {
+                    $query->where('booking_reference', 'like', $like)
+                        ->orWhere('user_name', 'like', $like)
+                        ->orWhere('astrologer_name', 'like', $like);
+                })
+                ->latest()
+                ->limit(5)
+                ->get()
+                ->map(fn ($booking) => [
+                    'type' => 'booking',
+                    'title' => $booking->booking_reference ?: 'Booking #' . $booking->id,
+                    'subtitle' => $booking->user_name . ' with ' . $booking->astrologer_name,
+                    'route' => '/bookings',
+                ])
+        );
+
+        $results = $results->merge(
+            User::query()
+                ->where(function ($query) use ($like) {
+                    $query->where('name', 'like', $like)->orWhere('email', 'like', $like);
+                })
+                ->whereIn('role', ['user', 'astrologer'])
+                ->latest()
+                ->limit(5)
+                ->get()
+                ->map(fn ($user) => [
+                    'type' => $user->role,
+                    'title' => $user->name,
+                    'subtitle' => $user->email,
+                    'route' => $user->role === 'astrologer' ? '/astrologers' : '/users',
+                ])
+        );
+
+        $results = $results->merge(
+            Product::query()
+                ->where('name', 'like', $like)
+                ->latest()
+                ->limit(5)
+                ->get()
+                ->map(fn ($product) => [
+                    'type' => 'product',
+                    'title' => $product->name,
+                    'subtitle' => 'Product',
+                    'route' => '/products',
+                ])
+        );
+
+        $results = $results->merge(
+            Category::query()
+                ->where('name', 'like', $like)
+                ->latest()
+                ->limit(5)
+                ->get()
+                ->map(fn ($category) => [
+                    'type' => 'category',
+                    'title' => $category->name,
+                    'subtitle' => 'Category',
+                    'route' => '/categories',
+                ])
+        );
+
+        return response()->json([
+            'success' => true,
+            'results' => $results->take(12)->values(),
+        ]);
+    }
+
     public function createAstrologer(Request $request)
     {
         $request->merge([
@@ -308,7 +457,7 @@ class ApiAuthController extends Controller
             'chat_price' => 'required|numeric',
             'call_price' => 'required|numeric',
             'about_bio' => 'nullable|string',
-            'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'is_featured' => 'nullable|boolean',
         ]);
 
@@ -326,10 +475,12 @@ class ApiAuthController extends Controller
 
         $profileImagePath = null;
         if ($request->hasFile('profile_image')) {
-            // This stores the avatar in storage/app/public/profiles directory
-            $profileImagePath = $request->file('profile_image')->store('profiles', 'public');
-            // To access this later, prepend /storage/
-            $profileImagePath = '/storage/' . $profileImagePath;
+            if (!is_dir(public_path('uploads/astrologers'))) {
+                mkdir(public_path('uploads/astrologers'), 0755, true);
+            }
+            $imageName = time() . '-' . Str::slug(pathinfo($request->file('profile_image')->getClientOriginalName(), PATHINFO_FILENAME)) . '.' . $request->file('profile_image')->extension();
+            $request->file('profile_image')->move(public_path('uploads/astrologers'), $imageName);
+            $profileImagePath = '/uploads/astrologers/' . $imageName;
         }
 
         $user->astrologerDetail()->create([
@@ -346,29 +497,36 @@ class ApiAuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Astrologer created successfully',
-            'user' => $user->load('astrologerDetail')
+            'user' => $user->load('astrologerDetail'),
         ]);
     }
 
-    /**
-     * Get all astrologers and their details (for Admin Panel & Frontend)
-     */
     public function getAstrologers()
     {
+        $term = trim((string) request()->query('q', ''));
+
         $astrologers = User::with('astrologerDetail')
             ->where('role', 'astrologer')
-            ->orderBy('created_at', 'desc')
-            ->get();
-            
+            ->when($term !== '', function ($query) use ($term) {
+                $query->where(function ($builder) use ($term) {
+                    $builder->where('name', 'like', '%' . $term . '%')
+                        ->orWhereHas('astrologerDetail', function ($detailQuery) use ($term) {
+                            $detailQuery->where('languages', 'like', '%' . $term . '%')
+                                ->orWhere('specialities', 'like', '%' . $term . '%')
+                                ->orWhere('about_bio', 'like', '%' . $term . '%');
+                        });
+                });
+            })
+            ->get()
+            ->sortByDesc(fn ($astrologer) => (int) ($astrologer->astrologerDetail->is_featured ?? false) * 100 + (float) ($astrologer->astrologerDetail->rating ?? 0))
+            ->values();
+
         return response()->json([
             'success' => true,
-            'astrologers' => $astrologers
+            'astrologers' => $astrologers,
         ]);
     }
 
-    /**
-     * Get a single astrologer profile
-     */
     public function getAstrologerProfile($id)
     {
         $astrologer = User::with('astrologerDetail')
@@ -382,13 +540,10 @@ class ApiAuthController extends Controller
 
         return response()->json([
             'success' => true,
-            'astrologer' => $astrologer
+            'astrologer' => $astrologer,
         ]);
     }
 
-    /**
-     * Update Astrologer Profile (Protected)
-     */
     public function updateAstrologerProfile(Request $request)
     {
         $user = $request->user();
@@ -431,10 +586,14 @@ class ApiAuthController extends Controller
 
         $profileImagePath = $user->astrologerDetail?->profile_image;
         if ($request->hasFile('profile_image')) {
-            $profileImagePath = '/storage/' . $request->file('profile_image')->store('profiles', 'public');
+            if (!is_dir(public_path('uploads/astrologers'))) {
+                mkdir(public_path('uploads/astrologers'), 0755, true);
+            }
+            $imageName = time() . '-' . Str::slug(pathinfo($request->file('profile_image')->getClientOriginalName(), PATHINFO_FILENAME)) . '.' . $request->file('profile_image')->extension();
+            $request->file('profile_image')->move(public_path('uploads/astrologers'), $imageName);
+            $profileImagePath = '/uploads/astrologers/' . $imageName;
         }
 
-        // Update or create astrologer details
         $user->astrologerDetail()->updateOrCreate(
             ['user_id' => $user->id],
             [
@@ -452,7 +611,28 @@ class ApiAuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Profile updated successfully',
-            'user' => $user->fresh()->load('astrologerDetail')
+            'user' => $user->fresh()->load('astrologerDetail'),
         ]);
+    }
+
+    private function ensureAdminAccount(): void
+    {
+        User::firstOrCreate(
+            ['email' => 'admin@astrozura.com'],
+            [
+                'name' => 'Astro Zura Admin',
+                'password' => bcrypt('123456'),
+                'role' => 'admin',
+                'is_profile_complete' => true,
+            ]
+        );
+    }
+
+    private function resolveFrontendUrl(string $frontend): string
+    {
+        return match ($frontend) {
+            'ecomm' => env('FRONTEND_ECOMM_URL', 'http://127.0.0.1:5174'),
+            default => env('FRONTEND_MAIN_URL', 'http://127.0.0.1:5173'),
+        };
     }
 }

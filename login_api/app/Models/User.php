@@ -31,6 +31,7 @@ class User extends Authenticatable
         'provider',
         'provider_id',
         'provider_token',
+        'profile_image',
         'date_of_birth',
         'time_of_birth',
         'place_of_birth',

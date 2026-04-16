@@ -105,17 +105,17 @@ const specialitiesArray = details.specialities ? details.specialities.split(',')
 const basePrice = details.chat_price || details.call_price || 20;
 
 const dynamicPlans = [
-  { id: 1, time: "10 Minutes", duration: 10, price: `₹${basePrice * 10}` },
-  { id: 2, time: "15 Minutes", duration: 15, price: `₹${basePrice * 15}` },
-  { id: 3, time: "20 Minutes", duration: 20, price: `₹${basePrice * 20}` },
-  { id: 4, time: "30 Minutes", duration: 30, price: `₹${basePrice * 30}` }
+  { id: 1, time: "10 Minutes", duration: 10, price: `Rs ${basePrice * 10}` },
+  { id: 2, time: "15 Minutes", duration: 15, price: `Rs ${basePrice * 15}` },
+  { id: 3, time: "20 Minutes", duration: 20, price: `Rs ${basePrice * 20}` },
+  { id: 4, time: "30 Minutes", duration: 30, price: `Rs ${basePrice * 30}` }
 ];
 
 const getImageUrl = (path) => {
   if (!path) return avatar;
   if (path.startsWith('http')) return path;
   const baseUrl = import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace('/api', '') : 'http://localhost:8000';
-  return `${baseUrl}${path}`;
+  return `${baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
 };
 
 return(
@@ -148,7 +148,7 @@ return(
 <div className="text-center md:text-left">
 
 <p className="text-sm text-[#c7926a] font-semibold flex items-center gap-2 justify-center md:justify-start">
-TOP RATED ⭐⭐⭐⭐⭐
+TOP RATED 5/5
 <span className="text-gray-500">({details.total_reviews || "3400+"} reviews)</span>
 </p>
 
@@ -177,7 +177,7 @@ navigate(`/consultation/${astrologer.id}`,{ state:{ type:"chat", astrologer} })
 }}
 className="px-7 py-3 rounded-xl shadow border bg-[#d8b14a] text-white border-[#c7926a]"
 >
-📩 Book Chat (₹{details.chat_price || 0}/min)
+Book Chat (Rs {details.chat_price || 0}/min)
 </button>
 
 <button
@@ -187,7 +187,7 @@ navigate(`/consultation/${astrologer.id}`,{ state:{ type:"call", astrologer} })
 }}
 className="px-7 py-3 rounded-xl shadow border bg-white text-[#D4A73C] border-[#c7926a]"
 >
-📲 Book Call (₹{details.call_price || 0}/min)
+Book Call (Rs {details.call_price || 0}/min)
 </button>
 
 </div>
@@ -226,7 +226,7 @@ Consultation Plans
 <div key={plan.id} className="bg-white p-6 rounded-2xl shadow text-center">
 
 <div className="w-12 h-12 bg-[#FFF4DC] flex items-center justify-center rounded-full mx-auto mb-4">
-🕰️
+Time
 </div>
 
 <p>{plan.time}</p>
@@ -259,7 +259,7 @@ Book Now
       onClick={() => showMsg("View All Clickable")}
       className="text-[#c7926a] font-medium"
     >
-      View All →
+      {"View All ->"}
     </button>
   </div>
 
@@ -277,7 +277,7 @@ Book Now
           />
           <h3 className="font-semibold">{u.name || "App User"}</h3>
         </div>
-        <p className="text-yellow-500 mt-2">⭐⭐⭐⭐⭐</p>
+        <p className="text-yellow-500 mt-2">5/5</p>
         <p className="text-gray-600 mt-3 text-sm leading-relaxed">
           {u.review || u.comment}
         </p>
@@ -319,7 +319,7 @@ Similar Experts
   {astro.astrologer_detail?.specialities || "Astrology"}
 </p>
 
-<p className="text-[#c7926a] mt-2 font-medium">₹{astro.astrologer_detail?.chat_price || 20}/min</p>
+<p className="text-[#c7926a] mt-2 font-medium">Rs {astro.astrologer_detail?.chat_price || 20}/min</p>
 
 <button
 onClick={()=>{

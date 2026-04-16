@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Upload, ArrowLeft } from "lucide-react";
+import { apiRequest, assetUrl } from "../lib/api";
 
 export default function EditProduct() {
   const { id } = useParams();
@@ -33,8 +34,7 @@ export default function EditProduct() {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/admin/ecomm/categories");
-      const result = await response.json();
+      const result = await apiRequest("/admin/ecomm/categories");
       if (result.status === "success") {
         setCategories(result.data);
       }
@@ -45,8 +45,7 @@ export default function EditProduct() {
 
   const fetchProduct = async () => {
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/admin/ecomm/products/${id}`);
-      const result = await response.json();
+      const result = await apiRequest(`/admin/ecomm/products/${id}`);
       if (result.status === "success") {
         const product = result.data;
         setFormData({
@@ -64,7 +63,7 @@ export default function EditProduct() {
           status: Boolean(product.status),
         });
         if (product.image) {
-          setPreview(`http://127.0.0.1:8000/${product.image}`);
+          setPreview(assetUrl(product.image));
         }
       } else {
         alert(result.message || "Product not found");
@@ -124,12 +123,10 @@ export default function EditProduct() {
         data.append("image", imageFile);
       }
 
-      const response = await fetch(`http://127.0.0.1:8000/api/admin/ecomm/products/update/${id}`, {
+      const result = await apiRequest(`/admin/ecomm/products/update/${id}`, {
         method: "POST",
         body: data,
       });
-
-      const result = await response.json();
       if (result.status === "success") {
         alert("Product updated successfully!");
         navigate("/products");

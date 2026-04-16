@@ -54,7 +54,7 @@ export default function Login() {
     setLoading(true); setError("");
     try {
       const response = await loginWithOtp(identifier, otp);
-      if (response) navigate(response.is_new_user ? "/profile-setup" : "/");
+      if (response) navigate(response.is_new_user ? "/user-profile" : "/");
     } catch (err) { setError(err.message || "Invalid or expired OTP."); }
     finally { setLoading(false); }
   };
@@ -65,13 +65,13 @@ export default function Login() {
     setLoading(true); setError("");
     try {
       const response = await loginWithPassword({ email: identifier, password });
-      if (response) navigate(response.is_new_user ? "/profile-setup" : "/");
+      if (response) navigate(response.is_new_user ? "/user-profile" : "/");
     } catch (err) { setError(err.message || "Invalid email or password."); }
     finally { setLoading(false); }
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = import.meta.env.VITE_API_BASE_URL + "/auth/google";
+    window.location.href = `${import.meta.env.VITE_API_BASE_URL}/auth/google?frontend=main`;
   };
 
   return (

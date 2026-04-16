@@ -250,7 +250,7 @@ export default function Panchang() {
               Auspicious Calendar
             </span>
             <h1 className="mt-6 text-4xl md:text-5xl font-black leading-tight">
-              Panchang &amp; Daily Muhurat
+              Astro Zura Panchang
             </h1>
             <p className="mt-5 max-w-xl text-sm md:text-base leading-7 text-slate-200">
               Unlock the power of Vedic time keeping. Discover daily Tithi, Nakshatra,
@@ -398,8 +398,8 @@ export default function Panchang() {
                     Data Integration
                   </p>
                   <p className="mt-2 text-sm text-slate-600">
-                    Accurate Panchang data powered by Prokerala production APIs and real
-                    coordinates.
+                    Accurate Panchang data generated from the live astrology integration
+                    and real coordinates.
                   </p>
                 </div>
                 <div className="rounded-2xl bg-[#f8f9fc] p-4">
@@ -518,7 +518,7 @@ export default function Panchang() {
                 <div>
                   <h2 className="text-lg font-bold">Panchang Timeline</h2>
                   <p className="mt-1 text-sm text-slate-500">
-                    Full day flow for all segments returned by Prokerala
+                    Full day flow for all segments returned for the selected day
                   </p>
                 </div>
               </div>

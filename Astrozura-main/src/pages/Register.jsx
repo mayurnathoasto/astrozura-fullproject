@@ -33,7 +33,7 @@ export default function Register() {
     setError("");
     try {
       const response = await registerWithPassword(formData);
-      if (response) navigate("/profile-setup");
+      if (response) navigate("/user-profile");
     } catch (err) {
       setError(err.message || "Failed to register. Try again.");
     } finally {

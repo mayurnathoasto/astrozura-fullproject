@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Trash2, Edit } from "lucide-react";
+import { apiRequest, assetUrl } from "../lib/api";
 
 export default function Categories() {
   const [categories, setCategories] = useState([]);
@@ -12,8 +13,7 @@ export default function Categories() {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/admin/ecomm/categories");
-      const result = await response.json();
+      const result = await apiRequest("/admin/ecomm/categories");
       if (result.status === "success") {
         setCategories(result.data);
       }
@@ -27,10 +27,9 @@ export default function Categories() {
   const deleteCategory = async (id) => {
     if (window.confirm("Are you sure you want to delete this category? All its products will be deleted too.")) {
       try {
-        const response = await fetch(`http://127.0.0.1:8000/api/admin/ecomm/categories/${id}`, {
+        const result = await apiRequest(`/admin/ecomm/categories/${id}`, {
           method: "DELETE",
         });
-        const result = await response.json();
         if (result.status === "success") {
           fetchCategories();
         }
@@ -70,7 +69,7 @@ export default function Categories() {
                     <td className="p-3">#{cat.id}</td>
                     <td className="p-3">
                       {cat.image ? (
-                        <img src={`http://127.0.0.1:8000/${cat.image}`} alt={cat.name} className="w-12 h-12 object-cover rounded-md" />
+                        <img src={assetUrl(cat.image)} alt={cat.name} className="w-12 h-12 object-cover rounded-md" />
                       ) : (
                         <span className="text-gray-400">No Image</span>
                       )}

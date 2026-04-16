@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Client\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -94,10 +95,21 @@ class AstrologyController extends Controller
                 }
             }
 
+            $scores = [
+                'love' => $this->scorePredictionText($dailyPrediction['emotions'], 58),
+                'career' => $this->scorePredictionText($dailyPrediction['profession'], 64),
+                'health' => $this->scorePredictionText($dailyPrediction['health'], 61),
+            ];
+
+            $averageScore = (int) round(collect($scores)->avg());
+
             return response()->json([
                 'status' => 'success',
                 'data' => [
                     'daily_prediction' => $dailyPrediction,
+                    'scores' => $scores,
+                    'status_label' => $averageScore >= 72 ? 'Highly Favorable' : ($averageScore >= 55 ? 'Favorable' : 'Balanced'),
+                    'display_date' => $baseDate->format('d M Y'),
                     'sign' => $sign,
                     'day' => $day,
                     'requested_datetime' => $datetime,
@@ -198,6 +210,63 @@ class AstrologyController extends Controller
                     'warning' => $sandboxWarning,
                 ],
             ]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 200);
+        }
+    }
+
+    public function downloadFreeKundliPdf(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'gender' => 'required|in:Male,Female,Other',
+            'date_of_birth' => 'required|date',
+            'time_of_birth' => 'required|date_format:H:i',
+            'place_of_birth' => 'required|string|max:255',
+            'coordinates' => 'required|string',
+            'ayanamsa' => 'nullable|integer',
+        ]);
+
+        try {
+            $token = $this->getAccessToken();
+            $datetime = $this->normalizeIsoDatetime(
+                $request->date_of_birth . 'T' . $request->time_of_birth . ':00+05:30'
+            );
+
+            $query = [
+                'datetime' => $datetime,
+                'coordinates' => $request->coordinates,
+                'ayanamsa' => (int) ($request->ayanamsa ?? 1),
+            ];
+
+            $response = Http::withToken($token)->timeout(25)->get('https://api.prokerala.com/v2/astrology/kundli/advanced', $query);
+
+            if (!$response->successful()) {
+                $response = Http::withToken($token)->timeout(25)->get('https://api.prokerala.com/v2/astrology/kundli', $query);
+            }
+
+            if (!$response->successful()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $this->extractProkeralaError($response, 'Failed to generate free kundli PDF.'),
+                ], 200);
+            }
+
+            $kundliData = $response->json('data', []);
+            $pdf = Pdf::loadView('pdf.free-kundli', [
+                'name' => $request->name,
+                'gender' => $request->gender,
+                'placeOfBirth' => $request->place_of_birth,
+                'dateOfBirth' => $request->date_of_birth,
+                'timeOfBirth' => $request->time_of_birth,
+                'generatedOn' => now('Asia/Kolkata')->format('d M Y, h:i A'),
+                'kundli' => $kundliData,
+                'dashaSummary' => $this->extractDashaSummary($kundliData['dasha_periods'] ?? []),
+            ])->setPaper('a4');
+
+            $safeName = preg_replace('/[^A-Za-z0-9\-]+/', '-', strtolower($request->name));
+
+            return $pdf->download(($safeName ?: 'free-kundli') . '-kundli.pdf');
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 200);
         }
@@ -587,5 +656,28 @@ class AstrologyController extends Controller
         }
 
         return $entries[0] ?? null;
+    }
+
+    private function scorePredictionText(string $text, int $default): int
+    {
+        $positiveWords = ['good', 'great', 'excellent', 'support', 'progress', 'success', 'strong', 'favorable', 'happy', 'positive', 'growth', 'gain'];
+        $cautionWords = ['delay', 'stress', 'avoid', 'concern', 'challenge', 'careful', 'slow', 'conflict', 'uncertain', 'tension'];
+
+        $lower = strtolower($text);
+        $score = $default;
+
+        foreach ($positiveWords as $word) {
+            if (str_contains($lower, $word)) {
+                $score += 4;
+            }
+        }
+
+        foreach ($cautionWords as $word) {
+            if (str_contains($lower, $word)) {
+                $score -= 4;
+            }
+        }
+
+        return max(25, min(95, $score));
     }
 }

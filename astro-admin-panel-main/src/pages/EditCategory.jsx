@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Upload, ArrowLeft } from "lucide-react";
+import { apiRequest, assetUrl } from "../lib/api";
 
 export default function EditCategory() {
   const { id } = useParams();
@@ -18,8 +19,7 @@ export default function EditCategory() {
   useEffect(() => {
     const fetchCategory = async () => {
       try {
-        const response = await fetch(`http://127.0.0.1:8000/api/admin/ecomm/categories/${id}`);
-        const result = await response.json();
+        const result = await apiRequest(`/admin/ecomm/categories/${id}`);
         if (result.status === "success") {
           const category = result.data;
           setFormData({
@@ -27,7 +27,7 @@ export default function EditCategory() {
             status: Boolean(category.status),
           });
           if (category.image) {
-            setPreview(`http://127.0.0.1:8000/${category.image}`);
+            setPreview(assetUrl(category.image));
           }
         } else {
           alert(result.message || "Category not found");
@@ -79,12 +79,10 @@ export default function EditCategory() {
         data.append("image", imageFile);
       }
 
-      const response = await fetch(`http://127.0.0.1:8000/api/admin/ecomm/categories/update/${id}`, {
+      const result = await apiRequest(`/admin/ecomm/categories/update/${id}`, {
         method: "POST",
         body: data,
       });
-
-      const result = await response.json();
       if (result.status === "success") {
         alert("Category updated successfully!");
         navigate("/categories");

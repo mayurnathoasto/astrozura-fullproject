@@ -1,86 +1,122 @@
-import { Menu, Bell, Search, User } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Bell, Menu, Search, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAppContext } from "../context/AppContext";
+import { apiRequest } from "../lib/api";
 
 function Topbar({ toggleSidebar }) {
+  const navigate = useNavigate();
+  const { adminUser, logout } = useAppContext();
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
 
-const handleNotificationClick = () => {
-alert("Notifications button clicked");
+  useEffect(() => {
+    if (query.trim().length < 2) {
+      setResults([]);
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        setSearching(true);
+        const response = await apiRequest(`/admin/search?q=${encodeURIComponent(query.trim())}`, {
+          requiresAuth: false,
+        });
+        setResults(response?.results || []);
+      } catch (error) {
+        console.error("Admin search failed", error);
+        setResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [query]);
+
+  const handleSelectResult = (route) => {
+    setQuery("");
+    setResults([]);
+    navigate(route || "/dashboard");
+  };
+
+  return (
+    <div className="flex items-center justify-between bg-black px-4 py-3 text-yellow-500 shadow">
+      <div className="flex items-center gap-3">
+        <button
+          className="md:hidden hover:text-yellow-400 transition"
+          onClick={toggleSidebar}
+        >
+          <Menu size={24} />
+        </button>
+
+        <h1 className="text-base md:text-xl font-semibold">
+          Welcome, {adminUser?.name || "Astrology Platform"}
+        </h1>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <div className="hidden md:block relative">
+          <div className="flex items-center bg-gray-800 px-3 py-2 rounded-lg min-w-[320px]">
+            <Search size={18} className="text-gray-400" />
+            <input
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search bookings, users, astrologers..."
+              className="bg-transparent outline-none ml-2 text-white text-sm w-full"
+            />
+          </div>
+
+          {(searching || results.length > 0) && (
+            <div className="absolute right-0 mt-2 w-full overflow-hidden rounded-2xl border border-gray-200 bg-white text-black shadow-2xl z-50">
+              {searching ? (
+                <div className="px-4 py-3 text-sm text-gray-500">Searching...</div>
+              ) : (
+                results.map((result, index) => (
+                  <button
+                    key={`${result.type}-${index}`}
+                    type="button"
+                    onClick={() => handleSelectResult(result.route)}
+                    className="block w-full border-b border-gray-100 px-4 py-3 text-left hover:bg-gray-50 last:border-b-0"
+                  >
+                    <p className="text-sm font-semibold text-gray-900">{result.title}</p>
+                    <p className="mt-1 text-xs text-gray-500">{result.subtitle}</p>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        <button
+          type="button"
+          className="relative hover:text-yellow-400 transition cursor-pointer"
+        >
+          <Bell size={22} />
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1 rounded-full">
+            3
+          </span>
+        </button>
+
+        <button
+          onClick={() => navigate("/profile")}
+          className="w-9 h-9 rounded-full bg-yellow-500 flex items-center justify-center text-black hover:bg-yellow-400 transition"
+          title="Admin Profile"
+        >
+          <User size={18} />
+        </button>
+
+        <button
+          onClick={logout}
+          className="hidden md:inline-flex rounded-full border border-yellow-500 px-4 py-2 text-xs font-semibold text-yellow-500 hover:bg-yellow-500 hover:text-black transition"
+        >
+          Logout
+        </button>
+      </div>
+    </div>
+  );
 }
 
-const handleUserClick = () => {
-alert("User profile button clicked");
-}
-
-return(
-
-<div className="flex items-center justify-between bg-black px-4 py-3 text-yellow-500 shadow">
-
-{/* LEFT */}
-
-<div className="flex items-center gap-3">
-
-<button
-className="md:hidden hover:text-yellow-400 transition"
-onClick={toggleSidebar}
->
-<Menu size={24}/>
-</button>
-
-<h1 className="text-base md:text-xl font-semibold">
-Welcome, Astrology Platform
-</h1>
-
-</div>
-
-{/* RIGHT */}
-
-<div className="flex items-center gap-4">
-
-{/* SEARCH */}
-
-<div className="hidden md:flex items-center bg-gray-800 px-3 py-2 rounded-lg">
-
-<Search size={18} className="text-gray-400"/>
-
-<input
-type="text"
-placeholder="Search..."
-className="bg-transparent outline-none ml-2 text-white text-sm"
-/>
-
-</div>
-
-{/* NOTIFICATION */}
-
-<button
-onClick={handleNotificationClick}
-className="relative hover:text-yellow-400 transition cursor-pointer"
->
-
-<Bell size={22}/>
-
-<span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1 rounded-full">
-3
-</span>
-
-</button>
-
-{/* USER */}
-
-<button
-onClick={handleUserClick}
-className="w-9 h-9 rounded-full bg-yellow-500 flex items-center justify-center text-black hover:bg-yellow-400 transition"
->
-
-<User size={18}/>
-
-</button>
-
-</div>
-
-</div>
-
-)
-
-}
-
-export default Topbar
+export default Topbar;

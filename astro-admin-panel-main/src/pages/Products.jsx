@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Trash2, Edit } from "lucide-react";
+import { apiRequest, assetUrl } from "../lib/api";
 
 export default function Products() {
   const [products, setProducts] = useState([]);
@@ -12,8 +13,7 @@ export default function Products() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/admin/ecomm/products");
-      const result = await response.json();
+      const result = await apiRequest("/admin/ecomm/products");
       if (result.status === "success") {
         setProducts(result.data);
       }
@@ -27,10 +27,9 @@ export default function Products() {
   const deleteProduct = async (id) => {
     if (window.confirm("Are you sure you want to delete this product?")) {
       try {
-        const response = await fetch(`http://127.0.0.1:8000/api/admin/ecomm/products/${id}`, {
+        const result = await apiRequest(`/admin/ecomm/products/${id}`, {
           method: "DELETE",
         });
-        const result = await response.json();
         if (result.status === "success") {
           fetchProducts();
         }
@@ -72,7 +71,7 @@ export default function Products() {
                     <td className="p-3">#{prod.id}</td>
                     <td className="p-3">
                       {prod.image ? (
-                        <img src={`http://127.0.0.1:8000/${prod.image}`} alt={prod.name} className="w-12 h-12 object-cover rounded-md" />
+                        <img src={assetUrl(prod.image)} alt={prod.name} className="w-12 h-12 object-cover rounded-md" />
                       ) : (
                         <span className="text-gray-400">No Image</span>
                       )}

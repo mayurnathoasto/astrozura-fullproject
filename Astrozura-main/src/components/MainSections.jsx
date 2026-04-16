@@ -54,7 +54,7 @@ export default function MainSections() {
     if (!path) return fallback;
     if (path.startsWith('http')) return path;
     const baseUrl = import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace('/api', '') : 'http://localhost:8000';
-    return `${baseUrl}${path}`;
+    return `${baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
   };
 
   return (
@@ -98,7 +98,7 @@ export default function MainSections() {
               <div className="flex gap-8 text-sm text-[#4F4F4F] mt-4">
                 <span>{featured.astrologer_detail?.experience_years || 0} Years Exp</span>
                 <span className="flex items-center gap-1 text-[#d8b14a]">
-                  ⭐ {featured.astrologer_detail?.rating || "5.0"}
+                  star {featured.astrologer_detail?.rating || "5.0"}
                 </span>
               </div>
 
@@ -201,7 +201,7 @@ export default function MainSections() {
                     </div>
 
                     <span className="ml-auto text-xs font-medium text-[#D4A73C] flex-shrink-0">
-                      ⭐ {details.rating || "5.0"}
+                      star {details.rating || "5.0"}
                     </span>
 
                   </div>
@@ -212,8 +212,8 @@ export default function MainSections() {
                   </div>
 
                   <div className="flex justify-between text-[14px] font-semibold mt-1 text-[#2B2B2B]">
-                    <span>₹{details.chat_price || 0}/min</span>
-                    <span>₹{details.call_price || 0}/min</span>
+                    <span>Rs {details.chat_price || 0}/min</span>
+                    <span>Rs {details.call_price || 0}/min</span>
                   </div>
 
                   <div className="flex flex-col sm:flex-row justify-between mt-5 gap-2">

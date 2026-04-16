@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
@@ -16,6 +16,8 @@ import a3 from "../assets/a3.png";
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
 export default function CosmicSection() {
+  const pricingRef = useRef(null);
+  const benefitsRef = useRef(null);
   const [msg, setMsg] = useState({ text: "", isError: false });
   const [activeBtn, setActiveBtn] = useState("pricing");
   const [plans, setPlans] = useState([]);
@@ -48,7 +50,7 @@ export default function CosmicSection() {
   const handleSubscribe = async (plan) => {
     setSubscribing(plan.id);
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("auth_token");
       const user  = JSON.parse(localStorage.getItem("user") || "{}");
 
       const res = await fetch(`${API_BASE}/subscriptions/subscribe`, {
@@ -66,7 +68,7 @@ export default function CosmicSection() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        showToast(`✅ Subscribed to ${plan.name} plan!`);
+        showToast(`Subscribed to ${plan.name} plan.`);
       } else {
         showToast(data.message || "Subscription failed. Try again.", true);
       }
@@ -79,6 +81,8 @@ export default function CosmicSection() {
 
   const handleClick = (type) => {
     setActiveBtn(type);
+    const targetRef = type === "pricing" ? pricingRef : benefitsRef;
+    targetRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
@@ -153,7 +157,7 @@ export default function CosmicSection() {
       </div>
 
       {/* PRICING PLANS (Dynamic from API) */}
-      <div className="bg-[#f8fafc] py-12 md:py-16 px-4 text-center border-t border-gray-50">
+      <div ref={pricingRef} className="bg-[#f8fafc] py-12 md:py-16 px-4 text-center border-t border-gray-50">
         <h2 className="text-2xl md:text-3xl font-black text-[#184070]">Choose Your Path to Insight</h2>
         <p className="text-[#5e6bcd] text-sm mt-2">
           Select the tier that aligns with your spiritual journey. No hidden fees, cancel anytime.
@@ -178,11 +182,11 @@ export default function CosmicSection() {
                     <p className="text-xs bg-[#23205b] text-white inline-block px-3 py-1 rounded-full mb-2">Most Popular</p>
                   )}
                   <h3 className="text-lg font-semibold">{plan.name}</h3>
-                  <p className="text-3xl font-bold my-4">₹{plan.price}/month</p>
+                  <p className="text-3xl font-bold my-4">Rs {plan.price}/month</p>
 
                   <ul className="text-sm text-gray-600 space-y-2 mb-6">
                     {features.map((f, idx) => (
-                      <li key={idx}>✔ {f}</li>
+                      <li key={idx}>- {f}</li>
                     ))}
                   </ul>
 
@@ -204,7 +208,7 @@ export default function CosmicSection() {
       </div>
 
       {/* BENEFITS */}
-      <div className="bg-[#f8fafc] py-16 px-4 text-center">
+      <div ref={benefitsRef} className="bg-[#f8fafc] py-16 px-4 text-center">
         <h2 className="text-2xl md:text-3xl font-bold">The Wisdom You Gain</h2>
         <p className="text-[#184070] text-sm mt-2">
           Beyond predictions, we provide the tools for self-discovery and spiritual growth.
@@ -243,13 +247,13 @@ export default function CosmicSection() {
             </thead>
             <tbody>
               {[
-                ["Only Personal Horoscopes", "✔", "✔", "✔"],
-                ["Moon Phase Calendar",       "-", "✔", "✔"],
-                ["Premium Transit Reports",  "-", "✔", "✔"],
+                ["Only Personal Horoscopes", "Yes", "Yes", "Yes"],
+                ["Moon Phase Calendar",       "-", "Yes", "Yes"],
+                ["Premium Transit Reports",  "-", "Yes", "Yes"],
                 ["Priority Email Support",    "-", "24h", "Instant"],
                 ["Personal Astrologer Call", "-", "-", "1 time"],
                 ["Workshops Access",          "19% Off", "25% Off", "Free"],
-                ["Annual Birth Chart PDF",   "-", "-", "✔"],
+                ["Annual Birth Chart PDF",   "-", "-", "Yes"],
               ].map((row, i) => (
                 <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                   {row.map((col, idx) => (

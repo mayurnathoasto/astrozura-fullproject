@@ -46,7 +46,7 @@ export default function Navbar() {
           {/* DESKTOP MENU */}
           <ul className="hidden md:flex gap-6 text-sm items-center font-medium">
             {[
-              { path: "/panchang", name: "Vedic Calendar" },
+              { path: "/panchang", name: "Astro Zura Panchang" },
               { path: "/kundli", name: "Birth Chart" },
               { path: "/rashifal", name: "Horoscope" },
               { path: "/matching", name: "Compatibility" },
@@ -180,7 +180,7 @@ export default function Navbar() {
             <ul className="flex flex-col gap-4 text-gray-700">
               {[
                 { path: "/", name: "Home" },
-                { path: "/panchang", name: "Vedic Calendar" },
+                { path: "/panchang", name: "Astro Zura Panchang" },
                 { path: "/kundli", name: "Birth Chart" },
                 { path: "/rashifal", name: "Horoscope" },
                 { path: "/matching", name: "Compatibility" },

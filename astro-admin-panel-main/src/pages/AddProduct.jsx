@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { apiRequest } from "../lib/api";
 
 export default function AddProduct() {
   const [categories, setCategories] = useState([]);
@@ -28,8 +29,7 @@ export default function AddProduct() {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/admin/ecomm/categories");
-      const result = await response.json();
+      const result = await apiRequest("/admin/ecomm/categories");
       if (result.status === "success") {
         setCategories(result.data.filter(cat => cat.status === 1));
       }
@@ -60,12 +60,11 @@ export default function AddProduct() {
     }
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/admin/ecomm/products/create", {
+      const result = await apiRequest("/admin/ecomm/products/create", {
         method: "POST",
         body: payload,
       });
 
-      const result = await response.json();
       if (result.status === "success") {
         alert("Product Added Successfully!");
         navigate("/products");
