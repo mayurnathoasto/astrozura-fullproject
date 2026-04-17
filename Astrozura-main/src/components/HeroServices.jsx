@@ -173,6 +173,17 @@ export default function HeroServices() {
                 {t("hero.desc")}
               </p>
 
+              <div className="mt-6 max-w-md mx-auto md:mx-0 text-left bg-white/50 p-4 rounded-xl border border-white shadow-sm inline-block">
+                <p className="text-[11px] font-black text-[#1E3557] uppercase tracking-widest mb-3">Free Kundli Includes:</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-6 text-xs text-[#6B7280] font-medium">
+                  <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-[#d8b14a] shadow-sm"></div>General Birth Details (D1)</div>
+                  <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-[#d8b14a] shadow-sm"></div>Basic Astrological Details</div>
+                  <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-[#d8b14a] shadow-sm"></div>Rashiphal</div>
+                  <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-[#d8b14a] shadow-sm"></div>Nakshatraphal</div>
+                  <div className="flex items-center gap-2 sm:col-span-2"><div className="w-1.5 h-1.5 rounded-full bg-[#d8b14a] shadow-sm"></div>Remedy (Past & Present)</div>
+                </div>
+              </div>
+
               <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-5 mt-6 justify-center md:justify-start">
                 <button
                   onClick={handleFreeKundliClick}

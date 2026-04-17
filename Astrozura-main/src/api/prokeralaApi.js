@@ -12,6 +12,26 @@ export const getDailyHoroscope = async (sign, day = 'today') => {
   }
 };
 
+export const getWeeklyHoroscope = async (sign) => {
+  try {
+    const response = await api.get(`/prokerala/horoscope-weekly/${sign}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching weekly horoscope:", error);
+    throw error;
+  }
+};
+
+export const getMonthlyHoroscope = async (sign) => {
+  try {
+    const response = await api.get(`/prokerala/horoscope-monthly/${sign}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching monthly horoscope:", error);
+    throw error;
+  }
+};
+
 export const generateKundli = async (datetime, coordinates, ayanamsa = 1, options = {}) => {
   try {
     const response = await api.post(`/prokerala/kundli`, {

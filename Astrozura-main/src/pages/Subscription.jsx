@@ -229,40 +229,33 @@ export default function CosmicSection() {
         </div>
       </div>
 
-      {/* COMPARE TABLE */}
+      {/* PAID FEATURES GRID */}
       <div className="bg-[#f8fafc] py-16 px-4 text-center">
-        <h2 className="text-2xl md:text-3xl font-bold mb-4">Compare Your Options</h2>
+        <h2 className="text-2xl md:text-3xl font-bold mb-4">Paid Features Included</h2>
         <p className="text-[#5e6bcd] text-sm mb-10">
-          Detailed breakdown of all features included in our cosmic subscription tiers.
+          A comprehensive list of everything you unlock with our premium reports.
         </p>
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white rounded-xl shadow-md text-left">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="py-3 px-4 text-sm font-semibold text-[#184070]">Feature Comparison</th>
-                <th className="py-3 px-4 text-sm font-semibold text-[#184070]">Monthly</th>
-                <th className="py-3 px-4 text-sm font-semibold text-[#184070]">Quarterly</th>
-                <th className="py-3 px-4 text-sm font-semibold text-[#184070]">Annual Sage</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                ["Only Personal Horoscopes", "Yes", "Yes", "Yes"],
-                ["Moon Phase Calendar",       "-", "Yes", "Yes"],
-                ["Premium Transit Reports",  "-", "Yes", "Yes"],
-                ["Priority Email Support",    "-", "24h", "Instant"],
-                ["Personal Astrologer Call", "-", "-", "1 time"],
-                ["Workshops Access",          "19% Off", "25% Off", "Free"],
-                ["Annual Birth Chart PDF",   "-", "-", "Yes"],
-              ].map((row, i) => (
-                <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                  {row.map((col, idx) => (
-                    <td key={idx} className="py-3 px-4 text-sm">{col}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-8 text-left">
+           {[ 
+             "General Birth Details", 
+             "D1 to D16 Chart", 
+             "Rashiphal + Nakshatraphal", 
+             "Strength / Weakness", 
+             "Career", 
+             "Love & Relationship", 
+             "All Mahadasha Detailed Prediction", 
+             "All Planetary Position Detailed Prediction", 
+             "All yoga or Dosh", 
+             "Numerology Details", 
+             "Vedic Remedy", 
+             "Sadesati Report", 
+             "Lal Kitab Remedy" 
+           ].map((feat, i) => (
+             <div key={i} className="flex items-center gap-3 bg-white p-3.5 rounded-xl shadow-sm border border-gray-100/80 hover:border-[#D4A73C]/30 hover:shadow-md transition">
+                <div className="w-6 h-6 rounded-full bg-[#fdfaf2] flex items-center justify-center text-[#D4A73C] shrink-0 border border-[#f3e7d3]">✓</div>
+                <span className="text-sm font-semibold text-[#2B2B2B]">{feat}</span>
+             </div>
+           ))}
         </div>
 
         {/* TESTIMONIALS */}

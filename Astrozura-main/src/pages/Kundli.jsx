@@ -255,6 +255,23 @@ export default function Kundli() {
             <button disabled={loadingKundli} type="submit" className="bg-[#1E3557] text-white px-12 py-4 rounded-xl font-bold text-lg hover:bg-[#162744] transition-all w-full md:w-auto disabled:opacity-50">{loadingKundli ? "Generating..." : "Generate Kundli"}</button>
           </div>
 
+          <div className="mt-16 pt-10 border-t border-gray-100">
+            <h3 className="text-xl sm:text-2xl font-bold text-center text-[#1E3557] mb-8">What You Will Discover Inside Your Kundali</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-6 max-w-4xl mx-auto px-4">
+                {[ 
+                    "Birth Details", "Astro Details", "All charts / Lagna", "Planetary Positions", "Up grah", 
+                    "Jaimini Details", "Dasham Bhava Madhya", "Astak varga", "Sarvastak", "Friendship table for Planet", 
+                    "Numerology / Favourable points", "Vimshottari Dasha", "Char Dasha", "Yogini Dasha", "All Dosha (Kaalsarpa, Mangal, Pitra)", 
+                    "Sade Sati Report", "Rashiphal", "Remedy", "Gemstone", "Shadbala" 
+                ].map((ft, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                        <div className="w-5 h-5 rounded-full bg-[#FAF7F2] flex items-center justify-center text-[#D4A73C] shrink-0 border border-[#EEE7D6] text-xs">✓</div>
+                        <span className="text-sm font-medium text-gray-600">{ft}</span>
+                    </div>
+                ))}
+            </div>
+          </div>
+
           {kundliData && (
             <div className="mt-12 pt-12 border-t border-gray-100 space-y-8">
               {apiMeta?.warning && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><div className="flex gap-3"><FaInfoCircle className="mt-0.5" /><div><p className="font-semibold">Upstream sandbox restriction detected</p><p className="mt-1">{apiMeta.warning}</p><p className="mt-2 text-xs">Requested datetime: {apiMeta.requestedDatetime}</p><p className="text-xs">Effective datetime: {apiMeta.effectiveDatetime}</p></div></div></div>}

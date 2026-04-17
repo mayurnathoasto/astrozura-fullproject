@@ -110,10 +110,10 @@
     "emotional_insight": "Emotional Insight",
     "service_desc": "Discover insights for your path",
     "services": {
-      "birth_chart": "Birth Chart",
-      "tarot": "Tarot Reading",
-      "synastry": "Synastry",
-      "career": "Career Growth"
+      "vedic_astrology": "Vedic Astrology",
+      "muhurat": "Muhurat (Auspices)",
+      "lal_kitab": "Lal Kitab Remedies",
+      "palmistry": "Palm & Numerology"
     }
   },
   "footer": {

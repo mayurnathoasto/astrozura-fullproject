@@ -123,6 +123,149 @@ class AstrologyController extends Controller
     }
 
     /**
+     * Get weekly horoscope.
+     */
+    public function getWeeklyHoroscope(Request $request, $sign = null)
+    {
+        try {
+            $token = $this->getAccessToken();
+            $sign = strtolower($sign ?: $request->query('sign', ''));
+
+            if (!$sign) {
+                return response()->json(['status' => 'error', 'message' => 'Sign is required.'], 400);
+            }
+
+            $baseDate = now('Asia/Kolkata');
+            $datetime = $baseDate->format('Y-m-d\TH:i:sP');
+
+            $response = Http::withToken($token)->timeout(20)->get('https://api.prokerala.com/v2/horoscope/weekly/basic', [
+                'sign' => $sign,
+                'datetime' => $datetime,
+                'type' => 'all',
+            ]);
+
+            if (!$response->successful()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $this->extractProkeralaError($response, 'Weekly horoscope unavailable.'),
+                ], 200);
+            }
+
+            $payload = $response->json('data', []);
+            $predictions = $payload['weekly_predictions'][0]['predictions'] ?? $payload['predictions'] ?? [];
+
+            $weeklyPrediction = [
+                'personal'  => 'No personal insights available for this week.',
+                'profession' => 'No career insights available for this week.',
+                'health'    => 'No health insights available for this week.',
+                'emotions'  => 'No emotional insights available for this week.',
+            ];
+
+            foreach ($predictions as $prediction) {
+                $type = strtolower($prediction['type'] ?? '');
+                $text = $prediction['prediction'] ?? '';
+                if ($type === 'general' && $text) $weeklyPrediction['personal'] = $text;
+                if ($type === 'career' && $text) $weeklyPrediction['profession'] = $text;
+                if ($type === 'health' && $text) $weeklyPrediction['health'] = $text;
+                if ($type === 'love' && $text) $weeklyPrediction['emotions'] = $text;
+            }
+
+            $scores = [
+                'love'   => $this->scorePredictionText($weeklyPrediction['emotions'], 60),
+                'career' => $this->scorePredictionText($weeklyPrediction['profession'], 65),
+                'health' => $this->scorePredictionText($weeklyPrediction['health'], 62),
+            ];
+
+            $weekStart = $baseDate->copy()->startOfWeek()->format('d M');
+            $weekEnd   = $baseDate->copy()->endOfWeek()->format('d M Y');
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'daily_prediction' => $weeklyPrediction,
+                    'scores'       => $scores,
+                    'status_label' => (int) round(collect($scores)->avg()) >= 72 ? 'Highly Favorable' : 'Favorable',
+                    'display_date' => "{$weekStart} – {$weekEnd}",
+                    'sign'         => $sign,
+                    'day'          => 'weekly',
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 200);
+        }
+    }
+
+    /**
+     * Get monthly horoscope.
+     */
+    public function getMonthlyHoroscope(Request $request, $sign = null)
+    {
+        try {
+            $token = $this->getAccessToken();
+            $sign = strtolower($sign ?: $request->query('sign', ''));
+
+            if (!$sign) {
+                return response()->json(['status' => 'error', 'message' => 'Sign is required.'], 400);
+            }
+
+            $baseDate = now('Asia/Kolkata');
+            $datetime = $baseDate->format('Y-m-d\TH:i:sP');
+
+            $response = Http::withToken($token)->timeout(20)->get('https://api.prokerala.com/v2/horoscope/monthly/basic', [
+                'sign' => $sign,
+                'datetime' => $datetime,
+                'type' => 'all',
+            ]);
+
+            if (!$response->successful()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $this->extractProkeralaError($response, 'Monthly horoscope unavailable.'),
+                ], 200);
+            }
+
+            $payload = $response->json('data', []);
+            $predictions = $payload['monthly_predictions'][0]['predictions'] ?? $payload['predictions'] ?? [];
+
+            $monthlyPrediction = [
+                'personal'  => 'No personal insights available for this month.',
+                'profession' => 'No career insights available for this month.',
+                'health'    => 'No health insights available for this month.',
+                'emotions'  => 'No emotional insights available for this month.',
+            ];
+
+            foreach ($predictions as $prediction) {
+                $type = strtolower($prediction['type'] ?? '');
+                $text = $prediction['prediction'] ?? '';
+                if ($type === 'general' && $text) $monthlyPrediction['personal'] = $text;
+                if ($type === 'career' && $text) $monthlyPrediction['profession'] = $text;
+                if ($type === 'health' && $text) $monthlyPrediction['health'] = $text;
+                if ($type === 'love' && $text) $monthlyPrediction['emotions'] = $text;
+            }
+
+            $scores = [
+                'love'   => $this->scorePredictionText($monthlyPrediction['emotions'], 62),
+                'career' => $this->scorePredictionText($monthlyPrediction['profession'], 66),
+                'health' => $this->scorePredictionText($monthlyPrediction['health'], 60),
+            ];
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'daily_prediction' => $monthlyPrediction,
+                    'scores'       => $scores,
+                    'status_label' => (int) round(collect($scores)->avg()) >= 72 ? 'Highly Favorable' : 'Favorable',
+                    'display_date' => $baseDate->format('F Y'),
+                    'sign'         => $sign,
+                    'day'          => 'monthly',
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 200);
+        }
+    }
+
+    /**
      * Generate kundli (birth chart).
      */
     public function generateKundli(Request $request)

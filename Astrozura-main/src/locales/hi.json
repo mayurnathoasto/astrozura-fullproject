@@ -110,10 +110,10 @@
     "emotional_insight": "भावनात्मक अंतर्दृष्टि",
     "service_desc": "अपने पथ के लिए अंतर्दृष्टि खोजें",
     "services": {
-      "birth_chart": "जन्म कुंडली",
-      "tarot": "टैरो रीडिंग",
-      "synastry": "सिनैस्ट्री",
-      "career": "करियर विकास"
+      "vedic_astrology": "वैदिक ज्योतिष",
+      "muhurat": "मुहूर्त (शुभ समय)",
+      "lal_kitab": "लाल किताब उपचार",
+      "palmistry": "हस्तरेखा एवं अंक ज्योतिष"
     }
   },
   "footer": {

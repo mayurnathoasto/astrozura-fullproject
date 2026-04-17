@@ -144,8 +144,7 @@ export default function MainSections() {
            <div className="flex justify-center items-center py-20">
                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D4A73C]"></div>
            </div>
-        ) : (
-          astrologers.length > 0 && (
+        ) : astrologers.length > 0 ? (
             <div>
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-10 mt-10">
                 <div className="flex items-center gap-4">
@@ -188,8 +187,9 @@ export default function MainSections() {
                     />
 
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-medium text-[#2B2B2B] truncate">
+                      <h3 className="text-sm font-medium text-[#2B2B2B] truncate flex items-center gap-2">
                         {astro.name}
+                        {i === 0 && <span className="bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-sm uppercase tracking-wider animate-pulse">Live</span>}
                       </h3>
                       <p className="text-[11px] text-[#9A9A9A] truncate">
                         {details.specialities || t("main.astrology")}
@@ -257,7 +257,9 @@ export default function MainSections() {
           </div>
 
         </div>
-        )}
+
+        ) : null}
+
 
       </div>
 

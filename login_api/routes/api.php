@@ -111,6 +111,8 @@ Route::delete('/admin/rituals/{id}', [RitualController::class, 'destroy']);
 // Prokerala API Proxy Endpoints
 Route::get('/astrology/horoscope/daily', [AstrologyController::class, 'getDailyHoroscope']);
 Route::get('/prokerala/horoscope/{sign}', [AstrologyController::class, 'getDailyHoroscope']);
+Route::get('/prokerala/horoscope-weekly/{sign}', [AstrologyController::class, 'getWeeklyHoroscope']);
+Route::get('/prokerala/horoscope-monthly/{sign}', [AstrologyController::class, 'getMonthlyHoroscope']);
 Route::post('/prokerala/kundli', [AstrologyController::class, 'generateKundli']);
 Route::post('/prokerala/kundli/free-pdf', [AstrologyController::class, 'downloadFreeKundliPdf']);
 Route::post('/prokerala/matching', [AstrologyController::class, 'matchMaking']);
