@@ -117,6 +117,13 @@ Route::post('/prokerala/matching', [AstrologyController::class, 'matchMaking']);
 Route::post('/prokerala/panchang', [AstrologyController::class, 'getPanchang']);
 Route::get('/prokerala/location/search', [AstrologyController::class, 'searchLocation']);
 
+// Premium Prokerala Endpoints
+Route::post('/prokerala/divisional-charts', [AstrologyController::class, 'getDivisionalCharts']);
+Route::post('/prokerala/predictions', [AstrologyController::class, 'getPredictions']);
+Route::post('/prokerala/numerology', [AstrologyController::class, 'getNumerology']);
+Route::post('/prokerala/sadesati', [AstrologyController::class, 'getSadesati']);
+Route::post('/prokerala/lal-kitab', [AstrologyController::class, 'getLalKitab']);
+
 Route::get('/test-endpoints', function() {
     $token = \Illuminate\Support\Facades\Cache::remember('prokerala_access_token_test', 3500, function () {
         $response = \Illuminate\Support\Facades\Http::asForm()->post('https://api.prokerala.com/token', [

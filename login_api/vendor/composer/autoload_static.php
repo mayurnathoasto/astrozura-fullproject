@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
+class ComposerStaticInite6c72cd12bae6efd22276e467c2b772b
 {
     public static $files = array (
         '6e3fae29631ef280660b3cdad06f25a8' => __DIR__ . '/..' . '/symfony/deprecation-contracts/function.php',
@@ -684,6 +684,7 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
         'App\\Http\\Controllers\\Api\\AstrologyController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/AstrologyController.php',
         'App\\Http\\Controllers\\Api\\BookingController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/BookingController.php',
         'App\\Http\\Controllers\\Api\\EcommController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/EcommController.php',
+        'App\\Http\\Controllers\\Api\\RitualController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/RitualController.php',
         'App\\Http\\Controllers\\Api\\SubscriptionController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/SubscriptionController.php',
         'App\\Http\\Controllers\\Api\\UserDashboardController' => __DIR__ . '/../..' . '/app/Http/Controllers/Api/UserDashboardController.php',
         'App\\Http\\Controllers\\AuthController' => __DIR__ . '/../..' . '/app/Http/Controllers/AuthController.php',
@@ -694,6 +695,7 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
         'App\\Models\\Order' => __DIR__ . '/../..' . '/app/Models/Order.php',
         'App\\Models\\OrderItem' => __DIR__ . '/../..' . '/app/Models/OrderItem.php',
         'App\\Models\\Product' => __DIR__ . '/../..' . '/app/Models/Product.php',
+        'App\\Models\\RitualService' => __DIR__ . '/../..' . '/app/Models/RitualService.php',
         'App\\Models\\SubscriptionPlan' => __DIR__ . '/../..' . '/app/Models/SubscriptionPlan.php',
         'App\\Models\\User' => __DIR__ . '/../..' . '/app/Models/User.php',
         'App\\Models\\UserSubscription' => __DIR__ . '/../..' . '/app/Models/UserSubscription.php',
@@ -7737,9 +7739,9 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584::$prefixDirsPsr4;
-            $loader->classMap = ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInite6c72cd12bae6efd22276e467c2b772b::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInite6c72cd12bae6efd22276e467c2b772b::$prefixDirsPsr4;
+            $loader->classMap = ComposerStaticInite6c72cd12bae6efd22276e467c2b772b::$classMap;
 
         }, null, ClassLoader::class);
     }

@@ -1,36 +1,39 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Globe, Instagram, Phone, Youtube } from "lucide-react";
 import vedic from "../assets/vedic-astrology.png";
 import { useAuth } from "../context/AuthContext";
 
-const servicesLinks = [
-  { label: "Astro Zura Panchang", to: "/panchang" },
-  { label: "Birth Chart", to: "/kundli" },
-  { label: "Daily Horoscope", to: "/rashifal" },
-  { label: "Compatibility", to: "/matching" },
-  { label: "Our Astrologers", to: "/astrologers" },
-  { label: "Pooja / Anusthan", to: "/rituals" },
-];
-
-const companyLinks = [
-  { label: "About Us", to: "/about-us" },
-  { label: "Contact Support", to: "/contact-support" },
-  { label: "Privacy Policy", to: "/privacy-policy" },
-  { label: "Terms & Conditions", to: "/terms-and-conditions" },
-];
-
 export default function Footer() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState("");
   const { user } = useAuth();
+  
+  const servicesLinks = [
+    { label: t("nav.panchang"), to: "/panchang" },
+    { label: t("nav.kundli"), to: "/kundli" },
+    { label: t("nav.rashifal"), to: "/rashifal" },
+    { label: t("nav.matching"), to: "/matching" },
+    { label: t("nav.astrologers"), to: "/astrologers" },
+    { label: t("footer.pooja"), to: "/rituals" },
+  ];
+
+  const companyLinks = [
+    { label: t("footer.about"), to: "/about-us" },
+    { label: t("footer.contact"), to: "/contact-support" },
+    { label: t("footer.privacy"), to: "/privacy-policy" },
+    { label: t("footer.terms"), to: "/terms-and-conditions" },
+  ];
+
   const socialLinks = [Globe, Instagram, Phone, Youtube];
 
   const handleSend = () => {
     if (!email) {
-      setMsg("Please enter email");
+      setMsg(t("footer.notif_email"));
     } else {
-      setMsg("Subscribed successfully!");
+      setMsg(t("footer.notif_success"));
       setEmail("");
     }
     setTimeout(() => setMsg(""), 2000);
@@ -51,8 +54,7 @@ export default function Footer() {
           </div>
 
           <p className="mt-5 max-w-xs text-sm leading-relaxed text-gray-300">
-            Bringing celestial wisdom to your fingertips. AstroZura connects
-            you with the world's most gifted astrologers and spiritual advisors.
+            {t("footer.tagline")}
           </p>
 
           <div className="mt-5 flex gap-3">
@@ -68,10 +70,10 @@ export default function Footer() {
         </div>
 
         <div>
-          <h3 className="mb-4 text-lg font-semibold">Services</h3>
+          <h3 className="mb-4 text-lg font-semibold">{t("footer.services")}</h3>
           <ul className="space-y-2 text-sm text-gray-300">
-            {servicesLinks.map((item) => (
-              <li key={item.to}>
+            {servicesLinks.map((item, idx) => (
+              <li key={idx}>
                 <Link to={item.to} className="transition hover:text-[#D4A73C]">
                   {item.label}
                 </Link>
@@ -81,10 +83,10 @@ export default function Footer() {
         </div>
 
         <div>
-          <h3 className="mb-4 text-lg font-semibold">Company</h3>
+          <h3 className="mb-4 text-lg font-semibold">{t("footer.company")}</h3>
           <ul className="space-y-2 text-sm text-gray-300">
-            {companyLinks.map((item) => (
-              <li key={item.to}>
+            {companyLinks.map((item, idx) => (
+              <li key={idx}>
                 <Link to={item.to} className="transition hover:text-[#D4A73C]">
                   {item.label}
                 </Link>
@@ -94,16 +96,16 @@ export default function Footer() {
         </div>
 
         <div>
-          <h3 className="mb-4 text-lg font-semibold">Newsletter</h3>
+          <h3 className="mb-4 text-lg font-semibold">{t("footer.newsletter")}</h3>
           <p className="mb-4 text-sm text-gray-300">
-            Get daily cosmic insights delivered to your inbox.
+            {t("footer.newsletter_desc")}
           </p>
 
           <input
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            placeholder="Your email address"
+            placeholder={t("footer.email_placeholder")}
             className="mb-3 w-full rounded-md bg-[#223E63] px-4 py-3 text-sm text-white outline-none placeholder-gray-400 focus:ring-2 focus:ring-[#D4A73C]"
           />
 
@@ -111,26 +113,26 @@ export default function Footer() {
             onClick={handleSend}
             className="w-full rounded-md bg-[#d8ba4a] py-3 text-sm font-semibold transition hover:bg-[#d8ba4a]"
           >
-            Subscribe
+            {t("footer.subscribe")}
           </button>
         </div>
       </div>
 
       <div className="border-t border-[#2C4870] py-6">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between px-6 text-sm text-gray-300 md:flex-row">
-          <p>(c) 2024 AstroZura Inc. All cosmic rights reserved.</p>
+          <p>{t("footer.rights")}</p>
 
           <div className="mt-3 flex items-center gap-6 md:mt-0">
             {!user && (
               <Link to="/astrologer/login" className="text-gray-300 transition hover:text-[#D4A73C]">
-                Astrologer Login
+                {t("footer.astrologer_login")}
               </Link>
             )}
             <Link to="/terms-and-conditions" className="transition hover:text-[#D4A73C]">
-              Disclaimer
+              {t("footer.disclaimer")}
             </Link>
             <Link to="/rituals" className="transition hover:text-[#D4A73C]">
-              Sitemap
+              {t("footer.sitemap")}
             </Link>
           </div>
         </div>

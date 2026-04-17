@@ -20,6 +20,6 @@ return tap(
         })
         ->create(),
     function (Application $app): void {
-        $app->usePublicPath(base_path('public_html'));
+        $app->usePublicPath(base_path('public'));
     }
 );

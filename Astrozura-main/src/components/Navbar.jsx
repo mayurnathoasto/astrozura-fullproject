@@ -1,13 +1,17 @@
 import { useState, useRef, useEffect } from "react";
 import { NavLink, Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import vedic from "../assets/vedic-astrology.png";
 import { useAuth } from "../context/AuthContext";
 
 export default function Navbar() {
+  const { t, i18n } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const { user, logout } = useAuth();
   const dropdownRef = useRef(null);
+  const langRef = useRef(null);
   const navigate = useNavigate();
 
   // Close dropdown when clicking outside
@@ -16,10 +20,18 @@ export default function Navbar() {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setDropdownOpen(false);
       }
+      if (langRef.current && !langRef.current.contains(e.target)) {
+        setLangDropdownOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const changeLanguage = (lng) => {
+    i18n.changeLanguage(lng);
+    setLangDropdownOpen(false);
+  };
 
   const handleLogout = async () => {
     setDropdownOpen(false);
@@ -29,9 +41,11 @@ export default function Navbar() {
   // Get first letter of name for avatar
   const avatarLetter = user?.name ? user.name.charAt(0).toUpperCase() : "U";
 
+  const currentLang = i18n.language.split('-')[0];
+
   return (
     <>
-      <nav className="bg-white shadow-sm px-4 md:px-10 py-1.5 sticky top-0 z-50">
+      <nav className="bg-white/80 backdrop-blur-lg shadow-[0_4px_30px_rgba(0,0,0,0.03)] px-4 md:px-10 py-1.5 sticky top-0 z-50 border-b border-gray-100/50">
         <div className="flex justify-between items-center">
 
           {/* LOGO */}
@@ -46,12 +60,12 @@ export default function Navbar() {
           {/* DESKTOP MENU */}
           <ul className="hidden md:flex gap-6 text-sm items-center font-medium">
             {[
-              { path: "/panchang", name: "Astro Zura Panchang" },
-              { path: "/kundli", name: "Birth Chart" },
-              { path: "/rashifal", name: "Horoscope" },
-              { path: "/matching", name: "Compatibility" },
-              { path: "/astrologers", name: "Our Astrologers" },
-              { path: "/subscription", name: "Premium Plans" }
+              { path: "/panchang", name: t("nav.panchang") },
+              { path: "/kundli", name: t("nav.kundli") },
+              { path: "/rashifal", name: t("nav.rashifal") },
+              { path: "/matching", name: t("nav.matching") },
+              { path: "/astrologers", name: t("nav.astrologers") },
+              { path: "/subscription", name: t("nav.subscription") }
             ].map((item, i) => (
               <li key={i}>
                 <NavLink
@@ -71,6 +85,33 @@ export default function Navbar() {
 
           {/* RIGHT SIDE */}
           <div className="flex items-center gap-3">
+
+            {/* LANGUAGE SWITCHER */}
+            <div className="relative" ref={langRef}>
+              <button
+                onClick={() => setLangDropdownOpen(!langDropdownOpen)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200 text-[12px] font-bold text-gray-600 hover:bg-gray-100 transition uppercase"
+              >
+                <span>globe</span>
+                {currentLang === 'hi' ? 'हिन्दी' : 'EN'}
+              </button>
+              {langDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-32 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden py-1">
+                  <button
+                    onClick={() => changeLanguage('en')}
+                    className={`block w-full text-left px-4 py-2 text-xs font-medium hover:bg-gray-50 ${currentLang === 'en' ? 'text-[#d8b14a]' : 'text-gray-700'}`}
+                  >
+                    English
+                  </button>
+                  <button
+                    onClick={() => changeLanguage('hi')}
+                    className={`block w-full text-left px-4 py-2 text-xs font-medium hover:bg-gray-50 ${currentLang === 'hi' ? 'text-[#d8b14a]' : 'text-gray-700'}`}
+                  >
+                    हिन्दी
+                  </button>
+                </div>
+              )}
+            </div>
 
             {user ? (
               /* USER AVATAR + DROPDOWN */
@@ -130,14 +171,14 @@ export default function Navbar() {
                             onClick={() => setDropdownOpen(false)}
                             className="block px-5 py-2.5 text-[13px] font-medium text-gray-700 hover:bg-gray-50 hover:text-[#184070] transition"
                           >
-                            Dashboard
+                            {t("nav.dashboard")}
                           </Link>
                           <Link
                             to="/user-profile"
                             onClick={() => setDropdownOpen(false)}
                             className="block px-5 py-2.5 text-[13px] font-medium text-gray-700 hover:bg-gray-50 hover:text-[#184070] transition"
                           >
-                            Profile
+                            {t("nav.profile")}
                           </Link>
                         </>
                       )}
@@ -147,7 +188,7 @@ export default function Navbar() {
                           onClick={handleLogout}
                           className="block w-full text-left px-5 py-2.5 text-[13px] font-semibold text-red-500 hover:bg-red-50 transition"
                         >
-                          Logout
+                          {t("nav.logout")}
                         </button>
                       </div>
                     </div>
@@ -160,7 +201,7 @@ export default function Navbar() {
                 to="/login"
                 className="bg-[#184070] text-white px-5 py-1.5 rounded-full text-sm hover:bg-[#161439] transition font-medium shadow-sm hover:shadow"
               >
-                Sign In
+                {t("nav.login")}
               </Link>
             )}
 

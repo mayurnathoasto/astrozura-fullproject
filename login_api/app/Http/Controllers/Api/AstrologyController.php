@@ -448,6 +448,140 @@ class AstrologyController extends Controller
         }
     }
 
+    /**
+     * Get Divisional Charts (D1 to D60).
+     */
+    public function getDivisionalCharts(Request $request)
+    {
+        $request->validate([
+            'datetime' => 'required|string',
+            'coordinates' => 'required|string',
+            'chart_type' => 'required|string',
+            'chart_style' => 'nullable|string',
+        ]);
+
+        $query = [
+            'datetime' => $this->normalizeIsoDatetime($request->datetime),
+            'coordinates' => $request->coordinates,
+            'chart_type' => $request->chart_type,
+            'chart_style' => $request->input('chart_style', 'north-indian'),
+            'format' => 'svg',
+        ];
+
+        return $this->proxyProkeralaRequest('https://api.prokerala.com/v2/astrology/chart', $query, true);
+    }
+
+    /**
+     * Get Predictions (Career, Love, Health, etc.).
+     */
+    public function getPredictions(Request $request)
+    {
+        $request->validate([
+            'datetime' => 'required|string',
+            'coordinates' => 'required|string',
+            'type' => 'required|string', // career, love-and-relationship, etc.
+        ]);
+
+        $type = $request->type;
+        $query = [
+            'datetime' => $this->normalizeIsoDatetime($request->datetime),
+            'coordinates' => $request->coordinates,
+        ];
+
+        return $this->proxyProkeralaRequest("https://api.prokerala.com/v2/astrology/prediction/{$type}", $query);
+    }
+
+    /**
+     * Get Numerology Report.
+     */
+    public function getNumerology(Request $request)
+    {
+        $request->validate([
+            'datetime' => 'required|string',
+            'name' => 'required|string',
+        ]);
+
+        $query = [
+            'datetime' => $this->normalizeIsoDatetime($request->datetime),
+            'name' => $request->name,
+        ];
+
+        return $this->proxyProkeralaRequest('https://api.prokerala.com/v2/numerology/report', $query);
+    }
+
+    /**
+     * Get Sadesati Report.
+     */
+    public function getSadesati(Request $request)
+    {
+        $request->validate([
+            'datetime' => 'required|string',
+            'coordinates' => 'required|string',
+        ]);
+
+        $query = [
+            'datetime' => $this->normalizeIsoDatetime($request->datetime),
+            'coordinates' => $request->coordinates,
+        ];
+
+        return $this->proxyProkeralaRequest('https://api.prokerala.com/v2/astrology/sadesati', $query);
+    }
+
+    /**
+     * Get Lal Kitab Remedies.
+     */
+    public function getLalKitab(Request $request)
+    {
+        $request->validate([
+            'datetime' => 'required|string',
+            'coordinates' => 'required|string',
+        ]);
+
+        $query = [
+            'datetime' => $this->normalizeIsoDatetime($request->datetime),
+            'coordinates' => $request->coordinates,
+        ];
+
+        return $this->proxyProkeralaRequest('https://api.prokerala.com/v2/astrology/lal-kitab-remedy', $query);
+    }
+
+    /**
+     * Helper to proxy requests to Prokerala with sandbox handling.
+     */
+    private function proxyProkeralaRequest(string $url, array $query, bool $isImage = false)
+    {
+        try {
+            $token = $this->getAccessToken();
+            $requestedDatetime = $query['datetime'];
+
+            $response = Http::withToken($token)->timeout(25);
+            if ($isImage) $response = $response->accept('image/svg+xml');
+            
+            $res = $response->get($url, $query);
+
+            if ($this->isSandboxDateRestriction($res)) {
+                $query['datetime'] = $this->toSandboxDatetime($requestedDatetime);
+                $res = $response->get($url, $query);
+            }
+
+            if (!$res->successful()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $this->extractProkeralaError($res, 'Prokerala API error.'),
+                ], 200);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $isImage ? $res->body() : $res->json('data'),
+                'effective_datetime' => $query['datetime'],
+                'requested_datetime' => $requestedDatetime,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 200);
+        }
+    }
+
     private function normalizeIsoDatetime(string $datetime): string
     {
         try {

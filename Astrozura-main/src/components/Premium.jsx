@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Star, Sparkles, HeartHandshake, TrendingUp } from "lucide-react";
 import {
   TbZodiacAquarius,
@@ -17,33 +18,34 @@ import {
 import { getDailyHoroscope } from "../api/prokeralaApi";
 
 const zodiac = [
-  { sign: "Aries", range: "March 21 - April 19", luckyColor: "Gold", luckyNumber: "08", icon: <TbZodiacAries size={28} strokeWidth={1.5} className="text-current" /> },
-  { sign: "Taurus", range: "April 20 - May 20", luckyColor: "Forest Green", luckyNumber: "06", icon: <TbZodiacTaurus size={28} strokeWidth={1.5} className="text-current" /> },
-  { sign: "Gemini", range: "May 21 - June 20", luckyColor: "Sky Blue", luckyNumber: "05", icon: <TbZodiacGemini size={28} strokeWidth={1.5} className="text-current" /> },
-  { sign: "Cancer", range: "June 21 - July 22", luckyColor: "Silver", luckyNumber: "02", icon: <TbZodiacCancer size={28} strokeWidth={1.5} className="text-current" /> },
-  { sign: "Leo", range: "July 23 - August 22", luckyColor: "Amber", luckyNumber: "01", icon: <TbZodiacLeo size={28} strokeWidth={1.5} className="text-current" /> },
-  { sign: "Virgo", range: "August 23 - September 22", luckyColor: "Olive", luckyNumber: "07", icon: <TbZodiacVirgo size={28} strokeWidth={1.5} className="text-current" /> },
-  { sign: "Libra", range: "September 23 - October 22", luckyColor: "Blush Pink", luckyNumber: "09", icon: <TbZodiacLibra size={28} strokeWidth={1.5} className="text-current" /> },
-  { sign: "Scorpio", range: "October 23 - November 21", luckyColor: "Crimson", luckyNumber: "04", icon: <TbZodiacScorpio size={28} strokeWidth={1.5} className="text-current" /> },
-  { sign: "Sagittarius", range: "November 22 - December 21", luckyColor: "Royal Purple", luckyNumber: "03", icon: <TbZodiacSagittarius size={28} strokeWidth={1.5} className="text-current" /> },
-  { sign: "Capricorn", range: "December 22 - January 19", luckyColor: "Steel Blue", luckyNumber: "10", icon: <TbZodiacCapricorn size={28} strokeWidth={1.5} className="text-current" /> },
-  { sign: "Aquarius", range: "January 20 - February 18", luckyColor: "Electric Blue", luckyNumber: "11", icon: <TbZodiacAquarius size={28} strokeWidth={1.5} className="text-current" /> },
-  { sign: "Pisces", range: "February 19 - March 20", luckyColor: "Sea Green", luckyNumber: "12", icon: <TbZodiacPisces size={28} strokeWidth={1.5} className="text-current" /> },
-];
-
-const services = [
-  { title: "Birth Chart", icon: <Star size={24} strokeWidth={1.5} className="text-white" />, price: "Rs 29.99" },
-  { title: "Tarot Reading", icon: <Sparkles size={24} strokeWidth={1.5} className="text-white" />, price: "Rs 19.99" },
-  { title: "Synastry", icon: <HeartHandshake size={24} strokeWidth={1.5} className="text-white" />, price: "Rs 34.99" },
-  { title: "Career Growth", icon: <TrendingUp size={24} strokeWidth={1.5} className="text-white" />, price: "Rs 24.99" },
+  { sign: "aries", id: "Aries", range: "March 21 - April 19", luckyColor: "Gold", luckyNumber: "08", icon: <TbZodiacAries size={28} strokeWidth={1.5} className="text-current" /> },
+  { sign: "taurus", id: "Taurus", range: "April 20 - May 20", luckyColor: "Forest Green", luckyNumber: "06", icon: <TbZodiacTaurus size={28} strokeWidth={1.5} className="text-current" /> },
+  { sign: "gemini", id: "Gemini", range: "May 21 - June 20", luckyColor: "Sky Blue", luckyNumber: "05", icon: <TbZodiacGemini size={28} strokeWidth={1.5} className="text-current" /> },
+  { sign: "cancer", id: "Cancer", range: "June 21 - July 22", luckyColor: "Silver", luckyNumber: "02", icon: <TbZodiacCancer size={28} strokeWidth={1.5} className="text-current" /> },
+  { sign: "leo", id: "Leo", range: "July 23 - August 22", luckyColor: "Amber", luckyNumber: "01", icon: <TbZodiacLeo size={28} strokeWidth={1.5} className="text-current" /> },
+  { sign: "virgo", id: "Virgo", range: "August 23 - September 22", luckyColor: "Olive", luckyNumber: "07", icon: <TbZodiacVirgo size={28} strokeWidth={1.5} className="text-current" /> },
+  { sign: "libra", id: "Libra", range: "September 23 - October 22", luckyColor: "Blush Pink", luckyNumber: "09", icon: <TbZodiacLibra size={28} strokeWidth={1.5} className="text-current" /> },
+  { sign: "scorpio", id: "Scorpio", range: "October 23 - November 21", luckyColor: "Crimson", luckyNumber: "04", icon: <TbZodiacScorpio size={28} strokeWidth={1.5} className="text-current" /> },
+  { sign: "sagittarius", id: "Sagittarius", range: "November 22 - December 21", luckyColor: "Royal Purple", luckyNumber: "03", icon: <TbZodiacSagittarius size={28} strokeWidth={1.5} className="text-current" /> },
+  { sign: "capricorn", id: "Capricorn", range: "December 22 - January 19", luckyColor: "Steel Blue", luckyNumber: "10", icon: <TbZodiacCapricorn size={28} strokeWidth={1.5} className="text-current" /> },
+  { sign: "aquarius", id: "Aquarius", range: "January 20 - February 18", luckyColor: "Electric Blue", luckyNumber: "11", icon: <TbZodiacAquarius size={28} strokeWidth={1.5} className="text-current" /> },
+  { sign: "pisces", id: "Pisces", range: "February 19 - March 20", luckyColor: "Sea Green", luckyNumber: "12", icon: <TbZodiacPisces size={28} strokeWidth={1.5} className="text-current" /> },
 ];
 
 export default function Premium() {
+  const { t } = useTranslation();
   const [message, setMessage] = useState("");
-  const [activeSign, setActiveSign] = useState("Aries");
+  const [activeSign, setActiveSign] = useState("aries");
   const [horoscope, setHoroscope] = useState(null);
   const [loadingHoroscope, setLoadingHoroscope] = useState(false);
   const [horoscopeError, setHoroscopeError] = useState("");
+
+  const services = [
+    { title: t("premium.services.birth_chart"), icon: <Star size={24} strokeWidth={1.5} className="text-white" />, price: "Rs 29.99" },
+    { title: t("premium.services.tarot"), icon: <Sparkles size={24} strokeWidth={1.5} className="text-white" />, price: "Rs 19.99" },
+    { title: t("premium.services.synastry"), icon: <HeartHandshake size={24} strokeWidth={1.5} className="text-white" />, price: "Rs 34.99" },
+    { title: t("premium.services.career"), icon: <TrendingUp size={24} strokeWidth={1.5} className="text-white" />, price: "Rs 24.99" },
+  ];
 
   useEffect(() => {
     if (!message) {
@@ -59,23 +61,23 @@ export default function Premium() {
       try {
         setLoadingHoroscope(true);
         setHoroscopeError("");
-        const response = await getDailyHoroscope(activeSign.toLowerCase(), "today");
+        const response = await getDailyHoroscope(activeSign, "today");
         if (response?.status === "success") {
           setHoroscope(response.data);
         } else {
           setHoroscope(null);
-          setHoroscopeError(response?.message || "Unable to load the daily horoscope.");
+          setHoroscopeError(response?.message || t("premium.loading_error"));
         }
       } catch (error) {
         setHoroscope(null);
-        setHoroscopeError(error?.response?.data?.message || "Unable to load the daily horoscope.");
+        setHoroscopeError(error?.response?.data?.message || t("premium.loading_error"));
       } finally {
         setLoadingHoroscope(false);
       }
     };
 
     void loadHoroscope();
-  }, [activeSign]);
+  }, [activeSign, t]);
 
   const activeSignMeta = useMemo(
     () => zodiac.find((item) => item.sign === activeSign) || zodiac[0],
@@ -104,18 +106,18 @@ export default function Premium() {
         <div className="flex justify-between items-center mb-10 flex-wrap gap-3">
           <div>
             <h2 className="text-xl md:text-2xl font-bold text-[#1A1A1A]">
-              Premium Consultations
+              {t("premium.title")}
             </h2>
             <p className="text-gray-400 text-xs mt-1">
-              Personalized guidance from world-renowned experts.
+              {t("premium.subtitle")}
             </p>
           </div>
 
           <button
-            onClick={() => notify("Opening all services")}
+            onClick={() => notify(t("main.notif_all_astrologers"))}
             className="text-[#c7926a] text-xs font-medium hover:underline"
           >
-            View All Services
+            {t("premium.view_all")}
           </button>
         </div>
 
@@ -134,7 +136,7 @@ export default function Premium() {
               </h3>
 
               <p className="text-[11px] text-gray-400 mt-1 mb-5">
-                Discover insights for your path
+                {t("premium.service_desc")}
               </p>
 
               <div className="flex items-center justify-between w-full mt-auto">
@@ -146,136 +148,161 @@ export default function Premium() {
                   onClick={() => notify(`${item.title} booked successfully`)}
                   className="text-[11px] border border-[#1E3557] text-[#1E3557] px-3 py-1 rounded-full hover:bg-[#1E3557] hover:text-white transition font-medium"
                 >
-                  Book Now
+                  {t("premium.book_now")}
                 </button>
               </div>
             </div>
           ))}
         </div>
 
-        <h2 className="text-center mt-12 md:mt-16 text-xl md:text-2xl font-bold text-[#1A1A1A]">
-          Daily Horoscopes
-        </h2>
-
-        <div className="flex w-full justify-between gap-2 md:gap-4 overflow-x-auto pt-4 pb-6 px-2 mt-4 hide-scrollbar">
-          {zodiac.map((z) => (
-            <div
-              key={z.sign}
-              onClick={() => setActiveSign(z.sign)}
-              className="cursor-pointer text-center text-xs flex-shrink-0"
-            >
-              <div
-                className={`w-12 h-12 md:w-16 md:h-16 lg:w-[4.5rem] lg:h-[4.5rem] mx-auto flex items-center justify-center rounded-2xl transition duration-300 flex-shrink-0 ${
-                  activeSign === z.sign
-                    ? "bg-gradient-to-br from-[#d8b14a] to-[#c7926a] text-white shadow-lg shadow-[#d8b14a]/30 lg:scale-110 relative z-10"
-                    : "bg-white border border-[#F3E7D3] text-[#1E3557] hover:bg-[#FFF8ED] hover:shadow-md"
-                }`}
-              >
-                {z.icon}
-              </div>
-              <p className="mt-2 text-[#1A1A1A] font-medium text-[11px] md:text-xs">{z.sign}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="bg-white rounded-3xl shadow-xl mt-8 md:mt-10 p-5 md:p-8 flex flex-col md:flex-row gap-6 md:gap-8 w-full border border-gray-50">
-          <div className="bg-[#FFF8ED] rounded-2xl p-6 md:p-8 w-full md:w-[280px] text-center border border-[#F3E7D3] shrink-0">
-            <div className="w-28 h-28 mx-auto bg-gradient-to-br from-[#FDE7C3] to-[#F3E7D3] rounded-full flex items-center justify-center text-[#c7926a] shadow-inner mb-4">
-              {React.cloneElement(activeSignMeta.icon, { size: 64 })}
-            </div>
-
-            <h3 className="font-semibold text-[#1A1A1A] text-lg">
-              {activeSignMeta.sign}
-            </h3>
-
-            <p className="text-xs text-gray-400 mt-1">
-              {activeSignMeta.range}
+        {/* DAILY HOROSCOPE SECTION */}
+        <div className="mt-20 md:mt-24">
+          <div className="text-center mb-10">
+            <span className="text-[10px] bg-[#fdf2d9] text-[#b8860b] px-4 py-1.5 rounded-full font-bold tracking-widest uppercase border border-[#f3d38d]/50 shadow-sm mb-4 inline-block">
+              {t("premium.cosmic_insights")}
+            </span>
+            <h2 className="text-3xl md:text-5xl font-black text-[#1E3557] tracking-tight">
+              {t("horoscope.title")}
+            </h2>
+            <p className="text-gray-400 mt-4 text-sm md:text-base font-medium max-w-xl mx-auto italic">
+              {t("horoscope.subtitle")}
             </p>
-
-            <div className="flex justify-between text-xs mt-4 text-gray-500">
-              <span>Lucky Color</span>
-              <span>{activeSignMeta.luckyColor}</span>
-            </div>
-
-            <div className="flex justify-between text-xs mt-2 text-gray-500">
-              <span>Lucky Number</span>
-              <span>{activeSignMeta.luckyNumber}</span>
-            </div>
-
-            <div className="mt-6 rounded-2xl bg-white px-4 py-3 text-left">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-gray-400">
-                Horoscope Date
-              </p>
-              <p className="mt-2 text-sm font-semibold text-[#1E3557]">
-                {horoscope?.display_date || "Loading..."}
-              </p>
-            </div>
           </div>
 
-          <div className="flex-1">
-            <div className="flex justify-between items-center gap-4 flex-wrap">
-              <h3 className="text-base font-semibold text-[#1A1A1A]">
-                Today's Forecast
+          <div className="flex w-full justify-start md:justify-center gap-4 md:gap-6 overflow-x-auto pt-4 pb-8 px-2 mt-4 hide-scrollbar">
+            {zodiac.map((z) => (
+              <div
+                key={z.sign}
+                onClick={() => setActiveSign(z.sign)}
+                className="cursor-pointer text-center group"
+              >
+                <div
+                  className={`w-14 h-14 md:w-20 md:h-20 lg:w-24 lg:h-24 mx-auto flex items-center justify-center rounded-[1.5rem] transition-all duration-500 relative ${
+                    activeSign === z.sign
+                      ? "bg-gradient-to-br from-[#1E3557] to-[#162a45] text-white shadow-2xl shadow-[#1E3557]/30 ring-4 ring-[#D4A73C]/10 scale-110 z-10"
+                      : "bg-white border-2 border-[#FAF7F2] text-[#1E3557] group-hover:border-[#D4A73C]/30 group-hover:bg-[#FFFDF9]"
+                  }`}
+                >
+                  <span className={`text-2xl md:text-3xl transition-transform duration-500 ${activeSign === z.sign ? 'scale-110' : 'group-hover:scale-110'}`}>
+                    {z.icon}
+                  </span>
+                  {activeSign === z.sign && (
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-[#D4A73C] rounded-full border-2 border-white animate-bounce"></div>
+                  )}
+                </div>
+                <p className={`mt-3 font-black text-[10px] md:text-xs uppercase tracking-widest transition-colors ${activeSign === z.sign ? 'text-[#D4A73C]' : 'text-[#1E3557] opacity-60 group-hover:opacity-100'}`}>
+                  {t(`horoscope.signs.${z.sign}`)}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-gradient-to-br from-white to-[#FAF7F2] rounded-[2.5rem] shadow-[0_30px_60px_rgba(0,0,0,0.05)] mt-8 p-6 md:p-12 flex flex-col lg:flex-row gap-10 md:gap-14 w-full border border-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[#D4A73C]/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+            
+            <div className="bg-white rounded-[2rem] p-8 lg:p-10 w-full lg:w-[350px] text-center border border-[#EEE7D6] shrink-0 shadow-lg relative z-10">
+              <div className="w-32 h-32 mx-auto bg-gradient-to-br from-[#FAF7F2] to-white rounded-3xl flex items-center justify-center text-[#D4A73C] shadow-inner mb-6 text-5xl border border-gray-50 ring-1 ring-[#D4A73C]/10">
+                {React.cloneElement(activeSignMeta.icon, { size: 80 })}
+              </div>
+
+              <h3 className="font-black text-[#1E3557] text-2xl uppercase tracking-tighter">
+                {t(`horoscope.signs.${activeSignMeta.sign}`)}
               </h3>
 
-              <span className="text-xs bg-[#FDE7C3] px-3 py-1 rounded text-[#c7926a]">
-                {horoscope?.status_label || "Daily Reading"}
-              </span>
+              <p className="text-[10px] font-bold text-[#b8860b] uppercase tracking-widest mt-2 px-4 py-1.5 bg-[#fdf2d9] rounded-full inline-block">
+                {activeSignMeta.range}
+              </p>
+
+              <div className="grid gap-4 mt-10">
+                <div className="flex justify-between items-center bg-[#FAF9F6] p-4 rounded-2xl border border-gray-50">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t("premium.lucky_color")}</span>
+                  <span className="text-sm font-black text-[#1E3557]">{activeSignMeta.luckyColor}</span>
+                </div>
+                <div className="flex justify-between items-center bg-[#FAF9F6] p-4 rounded-2xl border border-gray-50">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t("premium.lucky_number")}</span>
+                  <span className="text-sm font-black text-[#1E3557]">{activeSignMeta.luckyNumber}</span>
+                </div>
+              </div>
+
+              <div className="mt-8 rounded-2xl bg-[#1E3557] px-6 py-5 text-left shadow-xl shadow-[#1E3557]/10">
+                <p className="text-[9px] uppercase tracking-[0.2em] text-[#D4A73C] font-black">
+                  {t("premium.horoscope_date")}
+                </p>
+                <p className="mt-1 text-base font-bold text-white leading-none">
+                  {horoscope?.display_date || "Today"}
+                </p>
+              </div>
             </div>
 
-            {loadingHoroscope ? (
-              <p className="text-sm text-gray-500 mt-3 leading-relaxed">
-                Loading today's horoscope...
-              </p>
-            ) : horoscopeError ? (
-              <p className="text-sm text-red-500 mt-3 leading-relaxed">
-                {horoscopeError}
-              </p>
-            ) : (
-              <>
-                <p className="text-sm text-gray-500 mt-3 leading-relaxed">
-                  {horoscope?.daily_prediction?.personal || "No general prediction available for today."}
-                </p>
+            <div className="flex-1 relative z-10">
+              <div className="flex items-center gap-4 mb-8">
+                <div className="h-4 w-1 bg-[#D4A73C] rounded-full"></div>
+                <h3 className="text-xl font-black text-[#1E3557] tracking-tight">
+                  {t("premium.daily_forecast")}
+                </h3>
+              </div>
 
-                <div className="mt-6 space-y-5">
-                  {scoreRows.map((item) => (
-                    <div key={item.label}>
-                      <div className="flex justify-between text-xs mb-1 text-gray-600">
-                        <span>{item.label}</span>
-                        <span>{item.value}%</span>
-                      </div>
+              {loadingHoroscope ? (
+                <div className="space-y-4">
+                  <div className="h-4 bg-gray-100 rounded-full animate-pulse w-3/4"></div>
+                  <div className="h-4 bg-gray-100 rounded-full animate-pulse w-1/2"></div>
+                </div>
+              ) : horoscopeError ? (
+                <div className="p-6 bg-red-50 rounded-2xl border border-red-100">
+                  <p className="text-sm text-red-600 font-bold">{horoscopeError}</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-base md:text-lg text-[#1E3557]/70 leading-relaxed font-medium mb-10 first-letter:text-4xl first-letter:font-black first-letter:text-[#D4A73C]">
+                    {horoscope?.daily_prediction?.personal || "Your cosmic path is aligning for a day of discovery. Use this positive energy to seek new opportunities."}
+                  </p>
 
-                      <div className="w-full bg-[#EFEFEF] h-2 rounded-full">
-                        <div
-                          className="bg-[#d8b14a] h-2 rounded-full"
-                          style={{ width: `${item.value}%` }}
-                        ></div>
+                  <div className="grid gap-8">
+                    {scoreRows.map((item) => (
+                      <div key={item.label} className="group/bar">
+                        <div className="flex justify-between items-center mb-3">
+                          <span className="text-[10px] font-black text-[#1E3557] uppercase tracking-widest">{item.label}</span>
+                          <span className="text-xs font-black text-[#D4A73C]">{item.value}%</span>
+                        </div>
+
+                        <div className="w-full bg-white h-3 rounded-full border border-gray-100 overflow-hidden p-0.5">
+                          <div
+                            className="bg-gradient-to-r from-[#D4A73C] to-[#b8860b] h-full rounded-full transition-all duration-1000 ease-out"
+                            style={{ width: `${item.value}%` }}
+                          ></div>
+                        </div>
                       </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-12 grid gap-6 md:grid-cols-2">
+                    <div className="rounded-[1.5rem] bg-white p-6 shadow-sm border border-[#EEE7D6] hover:border-[#D4A73C]/30 transition-colors">
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className="text-lg">💼</span>
+                        <p className="text-[10px] uppercase tracking-widest text-gray-400 font-black">
+                          {t("premium.career_insight")}
+                        </p>
+                      </div>
+                      <p className="text-sm text-[#1E3557] leading-relaxed font-medium">
+                        {horoscope?.daily_prediction?.profession || "Dynamic shifts in work environment are expected."}
+                      </p>
                     </div>
-                  ))}
-                </div>
 
-                <div className="mt-6 grid gap-4 md:grid-cols-2">
-                  <div className="rounded-2xl bg-[#F8FAFC] p-4">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-gray-400">
-                      Career Insight
-                    </p>
-                    <p className="mt-2 text-sm text-gray-600 leading-6">
-                      {horoscope?.daily_prediction?.profession || "No career insight available."}
-                    </p>
+                    <div className="rounded-[1.5rem] bg-white p-6 shadow-sm border border-[#EEE7D6] hover:border-[#D4A73C]/30 transition-colors">
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className="text-lg">🎭</span>
+                        <p className="text-[10px] uppercase tracking-widest text-gray-400 font-black">
+                          {t("premium.emotional_insight")}
+                        </p>
+                      </div>
+                      <p className="text-sm text-[#1E3557] leading-relaxed font-medium">
+                        {horoscope?.daily_prediction?.emotions || "A day to focus on inner peace and clarity."}
+                      </p>
+                    </div>
                   </div>
-
-                  <div className="rounded-2xl bg-[#F8FAFC] p-4">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-gray-400">
-                      Emotional Insight
-                    </p>
-                    <p className="mt-2 text-sm text-gray-600 leading-6">
-                      {horoscope?.daily_prediction?.emotions || "No emotional insight available."}
-                    </p>
-                  </div>
-                </div>
-              </>
-            )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>

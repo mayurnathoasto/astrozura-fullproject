@@ -7,9 +7,6 @@ import ship from "../assets/icon2.png";
 import secure from "../assets/icon3.png";
 import undo from "../assets/undo.png";
 import arrow from "../assets/right-arrow.png";
-import j1 from "../assets/j1.jpeg";
-import j2 from "../assets/j2.jpeg";
-import j3 from "../assets/j3.jpeg";
 import Footer from "../components/Footer";
 
 export default function Cart() {
@@ -18,208 +15,248 @@ export default function Cart() {
     (acc, item) => acc + (Number(item.price) || 0) * (Number(item.qty) || 1),
     0
   );
-  const shipping = 15;
-  const tax = subtotal * 0.08;
+  const shipping = subtotal > 500 ? 0 : 40;
+  const tax = subtotal * 0.12; // Adjusted to 12% GST standard
   const total = subtotal + shipping + tax;
   const navigate = useNavigate();
+
   return (
     <>
-    <div className="min-h-screen bg-[#f6f7fb] p-4 sm:p-6 md:p-12">
-      {/* HEADER */}
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#162744]">
-            Your Cart
-          </h1>
-          <p className="text-gray-500 text-xs sm:text-sm">
-            You have {cartItems.length} premium items in your selection.
-          </p>
-        </div>
-        {/* CONTINUE SHOPPING */}
-        <button
-          onClick={() => alert("Continue Shopping Clicked")}
-          className="flex items-center gap-2 text-[#6c3583] text-sm hover:underline">
-          Continue Shopping
-          <img src={arrow} className="w-3" />
-        </button>
-      </div>
-      <div className="grid md:grid-cols-3 gap-8">
-        {/* LEFT */}
-        <div className="md:col-span-2 space-y-4">
-          {cartItems.length > 0 ? (
-            cartItems.map(item => (
-              <div
-                key={item.id}
-                className="bg-white p-3 sm:p-5 rounded-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between shadow-sm border border-transparent hover:border-gray-100 transition-all gap-3 sm:gap-4" >
-                
-                 <div className="flex gap-3 sm:gap-4 items-center w-full sm:w-[50%]">
-                  <div className="w-16 h-16 sm:w-24 sm:h-24 bg-gray-50 rounded-xl overflow-hidden flex-shrink-0 border border-gray-100">
-                    <img src={item.image} className="w-full h-full object-cover" alt={item.name} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[9px] sm:text-[10px] text-[#dbb54a] font-bold uppercase tracking-widest mb-1">
-                      {item.category}
-                    </p>
-                    <h2 className="font-bold text-[#1E3557] text-sm sm:text-base truncate leading-tight">
-                      {item.name}
-                    </h2>
-                    <p className="sm:hidden text-xs font-bold text-[#1E3557] mt-1">₹{item.price}</p>
-                  </div>
-                </div>
+      <div className="min-h-screen bg-[#FDFCFB] p-4 sm:p-6 md:p-10 lg:p-14 font-sans selection:bg-orange-100">
+        <div className="max-w-7xl mx-auto">
+          {/* HEADER */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-10 gap-4">
+            <div>
+              <nav className="text-[10px] uppercase tracking-[0.2em] text-gray-400 mb-2 font-bold">
+                Store / Shopping Selection
+              </nav>
+              <h1 className="text-4xl sm:text-5xl font-black text-[#0F172A] tracking-tight">
+                Your <span className="text-[#C5A021]">Cart</span>
+              </h1>
+              <p className="text-gray-400 text-sm mt-2 font-medium">
+                {cartItems.length} extraordinary items awaiting your confirmation.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate("/allproduct")}
+              className="group flex items-center gap-3 bg-white px-6 py-3 rounded-2xl shadow-sm border border-gray-100 hover:border-[#C5A021] transition-all duration-300 active:scale-95"
+            >
+              <span className="text-sm font-bold text-gray-600 group-hover:text-[#C5A021]">Continue Shopping</span>
+              <img src={arrow} className="w-4 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
 
-                <div className="flex items-center justify-between w-full sm:w-auto gap-2 sm:gap-8 bg-gray-50/50 sm:bg-transparent p-2 sm:p-0 rounded-xl sm:rounded-none mt-2 sm:mt-0">
-                  <div className="hidden sm:block text-right">
-                    <p className="text-sm font-bold text-[#1E3557]">₹{item.price}</p>
-                    <p className="text-[10px] text-gray-400 font-medium">Unit Price</p>
-                  </div>
+          <div className="grid lg:grid-cols-12 gap-10">
+            {/* LEFT - PRODUCT LIST */}
+            <div className="lg:col-span-8 space-y-6">
+              {cartItems.length > 0 ? (
+                <div className="space-y-4">
+                  {cartItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="group relative bg-white/60 backdrop-blur-xl p-4 sm:p-6 rounded-[2rem] flex flex-col sm:flex-row items-center justify-between border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-500 overflow-hidden"
+                    >
+                      {/* Background Decoration */}
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#C5A021]/5 to-transparent rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-700"></div>
 
-                  <div className="flex items-center gap-3 bg-white sm:bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-100 shadow-sm sm:shadow-none">
-                    <button 
-                      onClick={() => decreaseQty(item.id)} 
-                      className="hover:bg-gray-100 sm:hover:bg-white p-1 rounded-lg transition-all active:scale-95">
-                      <img src={minus} className="w-3" />
-                    </button>
-                    <span className="font-bold text-xs sm:text-sm min-w-[18px] text-center">{item.qty}</span>
-                    <button 
-                      onClick={() => increaseQty(item.id)} 
-                      className="hover:bg-gray-100 sm:hover:bg-white p-1 rounded-lg transition-all active:scale-95">
-                      <img src={plus} className="w-3" />
-                    </button>
-                  </div>
+                      <div className="flex gap-6 items-center w-full sm:w-[60%] relative z-10">
+                        <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gray-50 rounded-3xl overflow-hidden flex-shrink-0 border border-white shadow-inner group-hover:scale-[1.02] transition-transform duration-500">
+                          <img
+                            src={item.image}
+                            className="w-full h-full object-cover"
+                            alt={item.name}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="inline-block px-3 py-1 bg-[#C5A021]/10 rounded-full mb-2">
+                            <p className="text-[10px] text-[#C5A021] font-black uppercase tracking-widest">
+                              {item.category}
+                            </p>
+                          </div>
+                          <h2 className="font-bold text-[#1E293B] text-lg sm:text-xl truncate mb-1">
+                            {item.name}
+                          </h2>
+                          <div className="flex items-center gap-4 mt-2">
+                            <p className="text-lg font-black text-[#0F172A]">₹{item.price}</p>
+                            <span className="text-xs text-gray-400 font-medium px-2 py-0.5 border border-gray-100 rounded-md">Original Item</span>
+                          </div>
+                        </div>
+                      </div>
 
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    <div className="sm:hidden text-right">
-                      <p className="text-[9px] text-gray-400 font-medium uppercase tracking-tighter">Subtotal</p>
-                      <p className="text-sm font-bold text-[#1E3557]">₹{(item.price * item.qty).toFixed(2)}</p>
+                      <div className="flex items-center justify-between w-full sm:w-auto mt-6 sm:mt-0 gap-6 relative z-10">
+                        {/* QTY CONTROLLER */}
+                        <div className="flex items-center gap-4 bg-[#F8FAFC] p-2 rounded-2xl border border-gray-100 shadow-sm">
+                          <button
+                            onClick={() => decreaseQty(item.id)}
+                            className="w-8 h-8 flex items-center justify-center bg-white rounded-xl shadow-sm hover:text-red-500 transition-colors active:scale-90"
+                          >
+                            <img src={minus} className="w-3" />
+                          </button>
+                          <span className="font-black text-sm text-[#0F172A] min-w-[20px] text-center">
+                            {item.qty}
+                          </span>
+                          <button
+                            onClick={() => increaseQty(item.id)}
+                            className="w-8 h-8 flex items-center justify-center bg-white rounded-xl shadow-sm hover:text-[#C5A021] transition-colors active:scale-90"
+                          >
+                            <img src={plus} className="w-3" />
+                          </button>
+                        </div>
+
+                        <div className="text-right flex flex-col items-end">
+                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter mb-1">Subtotal</p>
+                          <p className="text-xl font-black text-[#0F172A]">
+                            ₹{(item.price * item.qty).toFixed(0)}
+                          </p>
+                          <button
+                            onClick={() => removeFromCart(item.id)}
+                            className="mt-2 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all duration-300"
+                            title="Remove item"
+                          >
+                            <img src={del} className="w-4 h-4 opacity-50 hover:opacity-100" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <button 
-                      onClick={() => removeFromCart(item.id)} 
-                      className="p-2 sm:p-2.5 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 hover:scale-105 active:scale-95 transition-all"
-                      title="Remove item">
-                      <img src={del} className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-white/50 backdrop-blur-md p-16 rounded-[3rem] text-center border border-white shadow-xl">
+                  <div className="w-24 h-24 mx-auto mb-6 bg-gray-50 rounded-[2rem] flex items-center justify-center border border-gray-100 shadow-inner">
+                    <img src={undo} className="w-10 opacity-20" />
+                  </div>
+                  <h2 className="text-2xl font-black text-gray-800 tracking-tight">Your cart is empty</h2>
+                  <p className="text-gray-400 mb-8 mt-2 font-medium max-w-xs mx-auto">Discover our collection of premium spiritual items curated just for you.</p>
+                  <button
+                    onClick={() => navigate("/allproduct")}
+                    className="bg-[#0F172A] text-white px-10 py-4 rounded-2xl font-bold shadow-2xl hover:bg-black transition-all duration-300 active:scale-95"
+                  >
+                    Explore Collections
+                  </button>
+                </div>
+              )}
+
+              {/* TRUST BADGES */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
+                {[
+                  { icon: ship, title: "Swift Delivery", desc: "Express shipping on all orders" },
+                  { icon: secure, title: "Secure Vault", desc: "100% Protected transactions" },
+                  { icon: undo, title: "Assurance", desc: "30-day spiritual guarantee" }
+                ].map((badge, idx) => (
+                  <div key={idx} className="bg-white/40 backdrop-blur-sm p-4 rounded-2xl border border-white flex items-center gap-4 shadow-sm">
+                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm border border-gray-50">
+                      <img src={badge.icon} className="w-6 opacity-70" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-black text-[#0F172A] uppercase">{badge.title}</p>
+                      <p className="text-[10px] text-gray-400 font-medium">{badge.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* RIGHT - SUMMARY */}
+            <div className="lg:col-span-4 lg:sticky lg:top-10 h-fit">
+              <div className="bg-[#0F172A] p-8 rounded-[2.5rem] shadow-2xl shadow-navy-100 text-white relative overflow-hidden">
+                {/* Decorative gradients */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#C5A021]/10 rounded-full -ml-24 -mb-24 blur-3xl"></div>
+
+                <h2 className="text-xl font-black mb-8 border-b border-white/10 pb-4">Order Summary</h2>
+
+                <div className="space-y-4 mb-8">
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/60 text-sm font-medium">Cart Subtotal</span>
+                    <span className="font-bold">₹{subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/60 text-sm font-medium">Logistic Charges</span>
+                    <span className={shipping === 0 ? "text-green-400 font-bold" : "font-bold"}>
+                      {shipping === 0 ? "FREE" : `₹${shipping.toFixed(2)}`}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/60 text-sm font-medium">Estimated Taxes</span>
+                    <span className="font-bold">₹{tax.toFixed(2)}</span>
+                  </div>
+                  {shipping !== 0 && (
+                    <div className="p-3 bg-white/5 rounded-xl border border-white/5">
+                      <p className="text-[10px] text-white/40 leading-tight">
+                        Add <span className="text-[#C5A021] font-bold">₹{(500 - subtotal).toFixed(0)}</span> more to your cart to unlock <span className="text-white font-bold">Free Shipping</span>.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-6 mb-8 border-t border-white/10">
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <p className="text-[10px] font-black text-[#C5A021] tracking-[0.2em] mb-1 uppercase">Final Amount</p>
+                      <h2 className="text-4xl font-black tracking-tight">₹{total.toFixed(0)}</h2>
+                    </div>
+                    <p className="text-[10px] text-white/40 font-medium mb-1">Inc. All Taxes</p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => navigate("/checkout")}
+                  disabled={cartItems.length === 0}
+                  className={`group relative w-full py-5 rounded-2xl font-black text-sm tracking-widest uppercase transition-all duration-500 overflow-hidden ${
+                    cartItems.length > 0
+                      ? "bg-gradient-to-r from-[#C5A021] to-[#E2C259] text-[#0F172A] shadow-xl shadow-[#C5A021]/20 hover:scale-[1.02] active:scale-95"
+                      : "bg-white/10 text-white/20 cursor-not-allowed"
+                  }`}
+                >
+                  <span className="relative z-10 flex items-center justify-center gap-3">
+                    Secure Checkout
+                    <img src={arrow} className="w-4 group-hover:translate-x-1 transition-transform invert" />
+                  </span>
+                  {/* Hover effect highlight */}
+                  <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+                </button>
+
+                <p className="text-[10px] text-white/30 mt-6 text-center font-medium">
+                  By clicking checkout you agree to our spiritual commerce terms and return policies.
+                </p>
+
+                {/* Promo Section */}
+                <div className="mt-8 pt-8 border-t border-white/10">
+                  <div className="flex gap-2">
+                    <input
+                      placeholder="PROMO CODE"
+                      className="flex-1 bg-white/5 border border-white/10 px-4 py-3 rounded-xl text-white text-xs font-bold focus:outline-none focus:border-[#C5A021] transition-colors"
+                    />
+                    <button
+                      onClick={() => alert("Verification code applied")}
+                      className="bg-white/10 px-6 rounded-xl text-[10px] font-black hover:bg-white/20 transition-all border border-white/5"
+                    >
+                      APPLY
                     </button>
                   </div>
                 </div>
               </div>
-            ))
-          ) : (
-            <div className="bg-white p-10 rounded-xl text-center shadow-sm">
-              <img src={undo} className="w-16 h-16 mx-auto mb-4 opacity-20" />
-              <h2 className="text-xl font-semibold text-gray-400">Your cart is feeling light...</h2>
-              <p className="text-gray-400 mb-6 mt-1">Explore our spiritual store to find something special.</p>
-              <button 
-                onClick={() => navigate("/allproduct")}
-                className="bg-[#1E3557] text-white px-8 py-2.5 rounded-full font-medium hover:bg-[#1E3557] transition"
-              >
-                Start Shopping
-              </button>
-            </div>
-          )}
-          {/* FEATURES */}
-          <div className="flex flex-wrap gap-6 mt-6 text-sm text-gray-600">
-            <div
-              onClick={() => alert("Free Shipping Info")}
-              className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow-sm cursor-pointer" >
-              <img src={ship} className="w-5" />
-              <div>
-                <p className="font-medium">Free Shipping</p>
-                <p className="text-xs text-gray-400">
-                  On all orders over ₹500
-                </p>
-              </div>
-            </div>
-            <div
-              onClick={() => alert("Secure Payment Info")}
-              className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow-sm cursor-pointer">
-              <img src={secure} className="w-5" />
-              <div>
-                <p className="font-medium">Secure Payment</p>
-                <p className="text-xs text-gray-400">
-                  100% encrypted checkout
-                </p>
-              </div>
-            </div>
-            <div
-              onClick={() => alert("Return Policy")}
-              className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow-sm cursor-pointer" >
-              <img src={undo} className="w-5" />
-              <div>
-                <p className="font-medium">Easy Returns</p>
-                <p className="text-xs text-gray-400">
-                  30-day hassle-free policy
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-        {/* RIGHT */}
-        <div className="space-y-4">
-          <div className="bg-white p-6 rounded-xl shadow-sm">
 
-            <h2 className="text-lg font-semibold mb-4">
-              Order Summary
-            </h2>
-            <div className="flex justify-between mb-2">
-              <span>Subtotal</span>
-              <span>₹{subtotal.toFixed(2)}</span>
+              {/* DISCOUT AD */}
+              <div className="mt-6 bg-[#C5A021]/10 p-6 rounded-[2rem] border border-[#C5A021]/20 group cursor-pointer hover:bg-[#C5A021]/20 transition-all duration-500">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-[#0F172A] text-[#C5A021] rounded-2xl flex items-center justify-center font-black text-xs shadow-lg group-hover:scale-110 transition-transform">
+                    10%
+                  </div>
+                  <div>
+                    <h3 className="font-black text-[#0F172A] text-sm">Join Spiritual Club</h3>
+                    <p className="text-[10px] text-gray-500 font-medium">Unlock exclusive rewards & early access.</p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="flex justify-between mb-2">
-              <span>Shipping</span>
-              <span>₹{shipping}</span>
-            </div>
-            <div className="flex justify-between mb-4">
-              <span>Taxes</span>
-              <span>₹{tax.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between font-bold mb-4">
-              <span>Total</span>
-              <span className="text-[#d8b14a]">
-                ₹{total.toFixed(2)}
-              </span>
-            </div>
-            <button
-              onClick={() => navigate("/checkout")}
-              disabled={cartItems.length === 0}
-              className={`w-full py-2 rounded-lg font-semibold transition ${
-                cartItems.length > 0 
-                ? "bg-[#1E3557] text-white hover:bg-[#1E3557]" 
-                : "bg-gray-200 text-gray-400 cursor-not-allowed"
-              }`} >
-              Proceed to Checkout
-            </button>
-            <p className="text-xs text-gray-400 mt-3 text-center">
-              By proceeding you agree to terms & privacy policy.
-            </p>
-            {/* PROMO */}
-            <div className="mt-4 flex gap-2">
-              <input
-                placeholder="ENTER CODE"
-                className="flex-1 border px-2 py-1 rounded-md text-sm" />
-              <button
-                onClick={() => alert("Promo Applied")}
-                className="border px-3 rounded-md text-sm" >
-                APPLY
-              </button>
-            </div>
-          </div>
-          {/* JOIN CLUB */}
-          <div className="bg-[#eef0ff] p-5 rounded-xl text-center">
-            <h3 className="font-semibold">
-              Join the Collector's Club
-            </h3>
-            <p className="text-sm text-gray-500">
-              Get 10% off your first order.
-            </p>
-            <button
-              onClick={() => alert("Joined Club")}
-              className="mt-3 text-[#1E3557] hover:underline" >
-              Join Now
-            </button>
           </div>
         </div>
       </div>
-    </div>
-    <Footer/>
+      <Footer />
+    </>
+  );
+}
     </>
   );
 }

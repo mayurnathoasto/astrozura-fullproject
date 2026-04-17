@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { useTranslation } from "react-i18next";
 import users from "../assets/avatar-users.jpg";
 import { downloadFreeKundliPdf, searchLocation } from "../api/prokeralaApi";
 
@@ -26,6 +27,7 @@ const parseBlobError = async (blob) => {
 };
 
 export default function HeroServices() {
+  const { t } = useTranslation();
   const sectionRef = useRef(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -106,7 +108,7 @@ export default function HeroServices() {
 
     try {
       setLoading(true);
-      setMessage("Generating your free kundli PDF...");
+      setMessage(t("hero.generating"));
 
       const response = await downloadFreeKundliPdf({
         name: form.name,
@@ -156,20 +158,19 @@ export default function HeroServices() {
           <div className="grid md:grid-cols-2 gap-10 md:gap-12 items-center">
             <div className="text-center md:text-left">
               <p className="text-xs md:text-sm text-[#D4A73C] font-semibold mb-3">
-                AI POWERED ASTROLOGY
+                {t("hero.tagline")}
               </p>
 
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-[#1F2937] leading-tight">
-                Unlock Your{" "}
+                {t("hero.title_main")}{" "}
                 <span className="bg-gradient-to-r from-[#d8b14a] to-[#c7926a] bg-clip-text text-transparent italic">
-                  Cosmic Destiny
+                  {t("hero.title_span")}
                 </span>{" "}
-                Today
+                {t("hero.title_end")}
               </h1>
 
               <p className="text-[#6B7280] mt-4 md:mt-5 max-w-md mx-auto md:mx-0 text-sm md:text-base">
-                Discover the wisdom of the stars with personalized readings
-                and expert consultations tailored to your journey.
+                {t("hero.desc")}
               </p>
 
               <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-5 mt-6 justify-center md:justify-start">
@@ -177,7 +178,7 @@ export default function HeroServices() {
                   onClick={handleFreeKundliClick}
                   className="bg-[#d8b14a] text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-[#c79c3a] transition shadow-lg w-full sm:w-auto"
                 >
-                  Get Your Free Kundli
+                  {t("hero.cta")}
                 </button>
 
                 <div className="flex items-center gap-2">
@@ -187,7 +188,7 @@ export default function HeroServices() {
                     className="w-9 h-9 rounded-full object-cover border-2 border-white shadow"
                   />
                   <p className="text-xs text-[#6B7280]">
-                    +5000 active users
+                    {t("hero.users_count")}
                   </p>
                 </div>
               </div>
@@ -199,14 +200,14 @@ export default function HeroServices() {
               className="bg-white p-6 md:p-8 rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-gray-100 w-full max-w-md mx-auto"
             >
               <h3 className="font-semibold text-[#1F2937] mb-5 text-center md:text-left">
-                Free Kundli Details
+                {t("hero.form_title")}
               </h3>
 
               <input
                 value={form.name}
                 onChange={(event) => handleFieldChange("name", event.target.value)}
                 className="border border-gray-200 p-3 w-full mb-3 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#D4A73C]"
-                placeholder="Full Name"
+                placeholder={t("hero.form_name")}
               />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
@@ -215,7 +216,7 @@ export default function HeroServices() {
                   onChange={(event) => handleFieldChange("gender", event.target.value)}
                   className="border border-gray-200 p-3 rounded-xl text-sm bg-white outline-none focus:ring-2 focus:ring-[#D4A73C]"
                 >
-                  <option value="">Gender</option>
+                  <option value="">{t("hero.form_gender")}</option>
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
                   <option value="Other">Other</option>
@@ -224,7 +225,7 @@ export default function HeroServices() {
                 <DatePicker
                   selected={form.birthDate}
                   onChange={(date) => handleFieldChange("birthDate", date)}
-                  placeholderText="Birth Date"
+                  placeholderText={t("hero.form_dob")}
                   dateFormat="dd/MM/yyyy"
                   maxDate={new Date()}
                   className="border border-gray-200 p-3 w-full rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#D4A73C]"
@@ -243,7 +244,7 @@ export default function HeroServices() {
                   value={form.placeOfBirth}
                   onChange={(event) => void handlePlaceChange(event.target.value)}
                   className="border border-gray-200 p-3 w-full rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#D4A73C]"
-                  placeholder="Place of Birth"
+                  placeholder={t("hero.form_pob")}
                 />
 
                 {searchingLocation && (
@@ -267,7 +268,7 @@ export default function HeroServices() {
               </div>
 
               <p className="mb-4 text-xs text-gray-500">
-                Search and select the birthplace to capture the correct latitude and longitude.
+                {t("hero.form_pob_note")}
               </p>
 
               <button
@@ -276,7 +277,7 @@ export default function HeroServices() {
                 onClick={() => void handleCreateKundli()}
                 className="bg-[#d8b14a] text-white w-full py-3 rounded-xl hover:bg-[#c7926a] transition font-medium shadow-md disabled:opacity-60"
               >
-                {loading ? "Generating Kundli..." : "Create Your Free Kundli"}
+                {loading ? t("hero.generating") : t("hero.form_submit")}
               </button>
             </div>
           </div>

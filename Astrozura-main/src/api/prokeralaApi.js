@@ -79,3 +79,53 @@ export const downloadFreeKundliPdf = async (payload) => {
     throw error;
   }
 };
+
+export const getDivisionalCharts = async (datetime, coordinates, chartType, chartStyle = 'north-indian') => {
+  try {
+    const response = await api.post('/prokerala/divisional-charts', { datetime, coordinates, chart_type: chartType, chart_style: chartStyle });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching divisional charts:", error);
+    throw error;
+  }
+};
+
+export const getPredictions = async (datetime, coordinates, type) => {
+  try {
+    const response = await api.post('/prokerala/predictions', { datetime, coordinates, type });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching predictions:", error);
+    throw error;
+  }
+};
+
+export const getNumerologyReport = async (datetime, name) => {
+  try {
+    const response = await api.post('/prokerala/numerology', { datetime, name });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching numerology report:", error);
+    throw error;
+  }
+};
+
+export const getSadesatiReport = async (datetime, coordinates) => {
+  try {
+    const response = await api.post('/prokerala/sadesati', { datetime, coordinates });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching sadesati report:", error);
+    throw error;
+  }
+};
+
+export const getLalKitabReport = async (datetime, coordinates) => {
+  try {
+    const response = await api.post('/prokerala/lal-kitab', { datetime, coordinates });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching lal kitab report:", error);
+    throw error;
+  }
+};

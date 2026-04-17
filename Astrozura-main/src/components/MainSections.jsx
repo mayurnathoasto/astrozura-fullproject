@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import astroMain from "../assets/astrol.png";
 import astro1 from "../assets/astro1.png";
 import astro2 from "../assets/astro2.png";
 import astro3 from "../assets/astro3.png";
 
 export default function MainSections() {
-
+  const { t } = useTranslation();
   const [msg, setMsg] = useState("");
   const [activeBtn, setActiveBtn] = useState({});
   const [featureBtn, setFeatureBtn] = useState("book");
@@ -68,103 +69,102 @@ export default function MainSections() {
 
       <div className="w-full max-w-[1200px] mx-auto space-y-20">
 
-        {/* FEATURED EXPERT */}
+        {/* DEDICATED FOUNDER BIO */}
+        <div className="bg-gradient-to-r from-[#FDFCFB] via-[#F9F6F0] to-[#FDFCFB] rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.04)] p-8 md:p-12 lg:p-14 grid md:grid-cols-2 gap-10 md:gap-16 items-center border border-[#EEE7D6] relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#D4A73C]/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+          
+          <div className="relative">
+            <img
+              src={astroMain}
+              className="w-full h-[300px] sm:h-[350px] md:h-[450px] object-cover object-top rounded-3xl shadow-2xl bg-white border-2 border-white ring-1 ring-[#D4A73C]/20 transition-transform duration-500 group-hover:scale-[1.02]"
+              alt="Acharya Mayur Nath"
+            />
+            <div className="absolute -bottom-6 -right-6 bg-white p-4 rounded-2xl shadow-xl border border-gray-100 hidden sm:block">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-[#1E3557] rounded-xl flex items-center justify-center text-white font-bold">15+</div>
+                <div>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none">Years of</p>
+                  <p className="text-xs font-bold text-[#1E3557] mt-1">Experience</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative">
+            <span className="inline-flex items-center gap-2 text-[10px] bg-[#fdf2d9] text-[#b8860b] px-4 py-1.5 rounded-full font-bold tracking-widest uppercase border border-[#f3d38d]/50 shadow-sm mb-6">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#D4A73C] animate-pulse"></span>
+              {t("main.the_mastermind")}
+            </span>
+
+            <h2 className="text-3xl md:text-5xl font-black text-[#1E3557] leading-[1.1] mb-2">
+              {t("main.founder_title_start")} <br/>
+              <span className="text-[#D4A73C] drop-shadow-sm">{t("main.founder_title_end")}</span>
+            </h2>
+
+            <p className="text-lg font-bold text-[#b8860b] mb-6">Acharya Mayur Nath</p>
+
+            <div className="relative">
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#D4A73C] rounded-full"></div>
+              <p className="text-sm md:text-base text-gray-500 pl-6 leading-loose italic font-medium">
+                "{t("main.founder_quote")}"
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-8 gap-y-6 mt-10">
+              {[
+                { label: t("main.vedic_astrology"), icon: "✨" },
+                { label: t("main.lal_kitab_rem"), icon: "📕" },
+                { label: t("main.numerology"), icon: "🔢" },
+                { label: t("main.palmistry"), icon: "✋" }
+              ].map((item, idx) => (
+                <div key={idx} className="flex items-center gap-3 group/item">
+                  <div className="w-8 h-8 rounded-lg bg-[#FAF7F2] border border-[#EEE7D6] flex items-center justify-center text-sm shadow-sm group-hover/item:border-[#D4A73C] transition-colors">{item.icon}</div>
+                  <span className="text-xs font-bold text-[#1E3557] opacity-80">{item.label}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-10">
+              <button
+                onClick={() => {
+                  notify(t("main.notif_booking"));
+                  navigate(`/consultation/founder`);
+                }}
+                className="bg-[#1E3557] text-white px-10 py-4 rounded-2xl text-sm font-black shadow-2xl shadow-[#1E3557]/20 hover:bg-[#162a45] hover:-translate-y-1 transition-all active:scale-95 flex items-center gap-3"
+              >
+                {t("main.book_consultation")}
+                <span className="opacity-50 text-xs">→</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* TOP RATED ASTROLOGERS SECTION */}
         {loading ? (
            <div className="flex justify-center items-center py-20">
                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D4A73C]"></div>
            </div>
-        ) : featured ? (
-          <div className="bg-gradient-to-r from-[#F3EBDD] via-[#EFE4D2] to-[#F7F2E7] rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.06)] p-6 md:p-10 lg:p-12 grid md:grid-cols-2 gap-8 md:gap-12 items-center border border-[#E8DFC8]">
-
-            <img
-              src={getImageUrl(featured.astrologer_detail?.profile_image, astroMain)}
-              className="w-full h-[240px] sm:h-[280px] md:h-[350px] object-cover object-top rounded-2xl shadow-sm bg-white"
-              alt={featured.name}
-            />
-
+        ) : (
+          astrologers.length > 0 && (
             <div>
-              <span className="text-[10px] bg-[#f3d38d] text-[#c7926a] px-3 py-1 rounded-full font-medium tracking-wide">
-                FEATURED EXPERT
-              </span>
-
-              <h2 className="text-2xl font-semibold mt-4 text-[#2b2b2b]">
-                {featured.name}
-              </h2>
-
-              <p className="text-sm text-[#c7926a] mt-1">
-                {featured.astrologer_detail?.specialities || "Astrology Specialist"}
-              </p>
-
-              <div className="flex gap-8 text-sm text-[#4F4F4F] mt-4">
-                <span>{featured.astrologer_detail?.experience_years || 0} Years Exp</span>
-                <span className="flex items-center gap-1 text-[#d8b14a]">
-                  star {featured.astrologer_detail?.rating || "5.0"}
-                </span>
-              </div>
-
-              <p className="text-sm text-[#6B6B6B] mt-5 leading-relaxed border-l-2 border-[#D4A73C] pl-4 italic">
-                {featured.astrologer_detail?.about_bio || "Empowering individuals to align their paths with celestial movements."}
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-7">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-10 mt-10">
+                <div className="flex items-center gap-4">
+                  <div className="h-8 w-1 bg-[#D4A73C] rounded-full"></div>
+                  <h2 className="text-2xl font-black text-[#1E3557] tracking-tight">
+                    {t("main.top_rated")}
+                  </h2>
+                </div>
 
                 <button
                   onClick={() => {
-                    notify("Booking Session...");
-                    setFeatureBtn("book");
-                    if (featured?.id) {
-                      navigate(`/consultation/${featured.id}`, { state: { type: "chat", astrologer: featured } });
-                    }
+                    notify(t("main.notif_all_astrologers"));
+                    navigate("/astrologers");
                   }}
-                  className={`px-4 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 ${
-                    featureBtn === "book"
-                      ? "bg-[#d8b14a] text-black shadow-lg shadow-[#d8b14a]/20"
-                      : "bg-[#F8F6F1] text-[#2C2C2C] border border-[#E5DEC9]"
-                  }`}
+                  className="text-[11px] font-black text-[#D4A73C] uppercase tracking-[0.2em] hover:text-[#b8860b] transition py-2 px-4 border border-[#D4A73C]/20 rounded-xl hover:bg-[#D4A73C]/5"
                 >
-                  Book Session
+                  {t("main.show_all")}
                 </button>
-
-                <button
-                  onClick={() => {
-                    notify("Opening Profile");
-                    setFeatureBtn("view");
-                    if (featured?.id) {
-                      navigate(`/profile/${featured.id}`, { state: { msg: "Viewing Profile..." } });
-                    }
-                  }}
-                  className={`px-4 py-3 rounded-xl text-sm font-bold transition-all active:scale-95 ${
-                    featureBtn === "view"
-                      ? "bg-black text-white shadow-xl"
-                      : "bg-[#F8F6F1] text-[#2C2C2C] border border-[#E5DEC9]"
-                  }`}
-                >
-                  View Profile
-                </button>
-
               </div>
-            </div>
-          </div>
-        ) : null}
-
-        {/* TOP RATED ASTROLOGERS */}
-        {!loading && astrologers.length > 0 && (
-        <div>
-
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-8">
-            <h2 className="text-base font-semibold text-[#1A1A1A]">
-              Top Rated Astrologers
-            </h2>
-
-            <button
-              onClick={() => {
-                notify("Opening all astrologers");
-                navigate("/astrologers");
-              }}
-              className="text-xs text-gray-400 hover:text-[#d8b14a] transition cursor-pointer">
-              Showing All Astrologers
-            </button>
-          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
 
@@ -192,11 +192,11 @@ export default function MainSections() {
                         {astro.name}
                       </h3>
                       <p className="text-[11px] text-[#9A9A9A] truncate">
-                        {details.specialities || "Astrology"}
+                        {details.specialities || t("main.astrology")}
                       </p>
 
                       <p className="text-[11px] text-[#9A9A9A]">
-                        {details.experience_years || 0} Years Experience
+                        {details.experience_years || 0} {t("main.years_exp")}
                       </p>
                     </div>
 
@@ -207,8 +207,8 @@ export default function MainSections() {
                   </div>
 
                   <div className="flex justify-between text-[10px] mt-5 text-[#9A9A9A]">
-                    <span>CHAT PRICE</span>
-                    <span>CALL PRICE</span>
+                    <span>{t("main.chat_price")}</span>
+                    <span>{t("main.call_price")}</span>
                   </div>
 
                   <div className="flex justify-between text-[14px] font-semibold mt-1 text-[#2B2B2B]">
@@ -220,7 +220,7 @@ export default function MainSections() {
 
                     <button
                       onClick={() => {
-                        notify("Viewing Profile");
+                        notify(t("main.notif_profile"));
                         setActiveBtn({ ...activeBtn, [i]: "view" });
                         navigate(`/profile/${astro.id}`, { state: { msg: "Viewing Profile..." } });
                       }}
@@ -230,12 +230,12 @@ export default function MainSections() {
                           : "bg-[#F8F6F1] text-[#d8ba4a]"
                       }`}
                     >
-                      View Profile
+                      {t("main.view_profile")}
                     </button>
 
                     <button
                       onClick={() => {
-                        notify("Booking Consultation");
+                        notify(t("main.notif_consultation"));
                         setActiveBtn({ ...activeBtn, [i]: "book" });
                         navigate(`/consultation/${astro.id}`, { state: { type: "chat", astrologer: astro } });
                       }}
@@ -245,7 +245,7 @@ export default function MainSections() {
                           : "bg-[#F8F6F1] text-[#2C2C2C]"
                       }`}
                     >
-                      Book Consultation
+                      {t("main.book_consultation")}
                     </button>
 
                   </div>
