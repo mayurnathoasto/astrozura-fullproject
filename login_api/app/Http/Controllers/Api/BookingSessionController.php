@@ -83,6 +83,13 @@ class BookingSessionController extends Controller
         $user = $request->user();
         $this->authorizeBooking($booking, $user->id);
 
+        if ((int) $booking->astrologer_id !== (int) $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only the astrologer can end this consultation.',
+            ], 403);
+        }
+
         if (in_array($booking->status, $this->closedStatuses, true)) {
             return response()->json([
                 'success' => true,
@@ -92,16 +99,22 @@ class BookingSessionController extends Controller
             ]);
         }
 
+        if ($booking->status !== 'in_progress') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only a live consultation can be completed.',
+            ], 422);
+        }
+
         $timezone = $booking->timezone ?: 'Asia/Kolkata';
         $now = Carbon::now($timezone);
-        $role = (int) $booking->astrologer_id === (int) $user->id ? 'astrologer' : 'user';
 
         $booking->update([
             'status' => 'completed',
             'completed_at' => $now,
             'session_ended_at' => $now,
             'session_end_reason' => 'manual_end',
-            'session_ended_by' => "{$role}:{$user->id}",
+            'session_ended_by' => "astrologer:{$user->id}",
             'session_last_activity_at' => $now,
         ]);
 
@@ -147,11 +160,10 @@ class BookingSessionController extends Controller
         $slug = strtolower(preg_replace('/[^a-zA-Z0-9_-]+/', '-', $reference));
         $roomId = substr("astrozura-{$slug}", 0, 120);
 
-        $booking->update([
-            'session_room_id' => $roomId,
-        ]);
+        $booking->session_room_id = $roomId;
+        $booking->save();
 
-        return $booking->fresh();
+        return $booking;
     }
 
     private function buildSessionPayload(Booking $booking, int $viewerId): array
@@ -175,7 +187,7 @@ class BookingSessionController extends Controller
         $withinJoinWindow = $joinStartsAt && $joinEndsAt ? $now->betweenIncluded($joinStartsAt, $joinEndsAt) : false;
         $canStart = $isAstrologer && !$isClosed && !$isLive && $withinJoinWindow;
         $canJoin = !$isClosed && $withinJoinWindow;
-        $canEnd = ($isAstrologer || $isUser) && ($isLive || $withinJoinWindow) && !$isClosed;
+        $canEnd = $isAstrologer && $isLive && !$isClosed;
         $needsLowTimeWarning = $isLive && $remainingSeconds > 0 && $remainingSeconds <= $lowTimeWarningSeconds;
 
         $zegoUserId = $this->buildZegoUserId($viewerId, $isAstrologer ? 'astro' : 'user');
