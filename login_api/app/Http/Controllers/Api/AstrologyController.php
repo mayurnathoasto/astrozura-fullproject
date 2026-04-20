@@ -40,6 +40,8 @@ class AstrologyController extends Controller
             $token = $this->getAccessToken();
             $sign = strtolower($sign ?: $request->query('sign', ''));
             $day = strtolower($request->query('day', 'today'));
+            $supportedLanguages = ['en'];
+            $language = $this->resolveRequestedLanguage($request, $supportedLanguages);
 
             if (!$sign) {
                 return response()->json(['status' => 'error', 'message' => 'Sign is required.'], 400);
@@ -56,6 +58,7 @@ class AstrologyController extends Controller
                 'sign' => $sign,
                 'datetime' => $datetime,
                 'type' => 'all',
+                'la' => $language,
             ]);
 
             if (!$response->successful()) {
@@ -112,6 +115,8 @@ class AstrologyController extends Controller
                     'display_date' => $baseDate->format('d M Y'),
                     'sign' => $sign,
                     'day' => $day,
+                    'language' => $language,
+                    'supported_languages' => $supportedLanguages,
                     'requested_datetime' => $datetime,
                     'date' => $datetime,
                     'provider_date' => $payload['datetime'] ?? null,
@@ -276,6 +281,7 @@ class AstrologyController extends Controller
             'ayanamsa' => 'nullable|integer',
             'chart_type' => 'nullable|in:rasi,navamsa,lagna',
             'chart_style' => 'nullable|in:north-indian,south-indian,east-indian',
+            'la' => 'nullable|string',
         ]);
 
         try {
@@ -283,10 +289,13 @@ class AstrologyController extends Controller
             $requestedDatetime = $this->normalizeIsoDatetime($request->datetime);
             $chartType = $request->input('chart_type', 'rasi');
             $chartStyle = $request->input('chart_style', 'north-indian');
+            $supportedLanguages = ['en', 'ta', 'te', 'ml', 'gu', 'bn'];
+            $language = $this->resolveRequestedLanguage($request, $supportedLanguages);
             $query = [
                 'datetime' => $requestedDatetime,
                 'coordinates' => $request->coordinates,
                 'ayanamsa' => (int) ($request->ayanamsa ?? 1),
+                'la' => $language,
             ];
 
             $response = Http::withToken($token)->timeout(25)->get('https://api.prokerala.com/v2/astrology/kundli/advanced', $query);
@@ -347,6 +356,8 @@ class AstrologyController extends Controller
                         'chart_style' => $chartStyle,
                     ],
                     'dasha_summary' => $dashaSummary,
+                    'language' => $language,
+                    'supported_languages' => $supportedLanguages,
                     'requested_datetime' => $requestedDatetime,
                     'effective_datetime' => $effectiveDatetime,
                     'is_sandbox_demo' => $sandboxWarning !== null,
@@ -368,10 +379,12 @@ class AstrologyController extends Controller
             'place_of_birth' => 'required|string|max:255',
             'coordinates' => 'required|string',
             'ayanamsa' => 'nullable|integer',
+            'la' => 'nullable|string',
         ]);
 
         try {
             $token = $this->getAccessToken();
+            $language = $this->resolveRequestedLanguage($request, ['en', 'ta', 'te', 'ml', 'gu', 'bn']);
             $datetime = $this->normalizeIsoDatetime(
                 $request->date_of_birth . 'T' . $request->time_of_birth . ':00+05:30'
             );
@@ -380,6 +393,7 @@ class AstrologyController extends Controller
                 'datetime' => $datetime,
                 'coordinates' => $request->coordinates,
                 'ayanamsa' => (int) ($request->ayanamsa ?? 1),
+                'la' => $language,
             ];
 
             $response = Http::withToken($token)->timeout(25)->get('https://api.prokerala.com/v2/astrology/kundli/advanced', $query);
@@ -426,18 +440,22 @@ class AstrologyController extends Controller
             'boy_coordinates' => 'required|string',
             'boy_dob' => 'required|string',
             'ayanamsa' => 'nullable|integer',
+            'la' => 'nullable|string',
         ]);
 
         try {
             $token = $this->getAccessToken();
             $requestedGirlDob = $this->normalizeIsoDatetime($request->girl_dob);
             $requestedBoyDob = $this->normalizeIsoDatetime($request->boy_dob);
+            $supportedLanguages = ['en', 'hi', 'ta', 'te', 'ml'];
+            $language = $this->resolveRequestedLanguage($request, $supportedLanguages);
             $query = [
                 'girl_coordinates' => $request->girl_coordinates,
                 'girl_dob' => $requestedGirlDob,
                 'boy_coordinates' => $request->boy_coordinates,
                 'boy_dob' => $requestedBoyDob,
                 'ayanamsa' => (int) ($request->ayanamsa ?? 1),
+                'la' => $language,
             ];
 
             $response = Http::withToken($token)->timeout(25)->get('https://api.prokerala.com/v2/astrology/kundli-matching/advanced', $query);
@@ -474,6 +492,8 @@ class AstrologyController extends Controller
                 'status' => 'success',
                 'data' => $data,
                 'meta' => [
+                    'language' => $language,
+                    'supported_languages' => $supportedLanguages,
                     'requested_girl_dob' => $requestedGirlDob,
                     'requested_boy_dob' => $requestedBoyDob,
                     'effective_girl_dob' => $effectiveGirlDob,
@@ -497,8 +517,15 @@ class AstrologyController extends Controller
             return response()->json(['status' => 'success', 'data' => []]);
         }
 
+        $language = $this->resolveRequestedLanguage(
+            $request,
+            ['en', 'hi', 'ta', 'te', 'ml', 'gu', 'bn'],
+            'en',
+            'language'
+        );
+
         try {
-            $googleResults = $this->searchGoogleLocations($q);
+            $googleResults = $this->searchGoogleLocations($q, $language);
             if (!empty($googleResults)) {
                 return response()->json([
                     'status' => 'success',
@@ -545,15 +572,19 @@ class AstrologyController extends Controller
             'datetime' => 'required|string',
             'coordinates' => 'required|string',
             'ayanamsa' => 'nullable|integer',
+            'la' => 'nullable|string',
         ]);
 
         try {
             $token = $this->getAccessToken();
             $requestedDatetime = $this->normalizeIsoDatetime($request->datetime);
+            $supportedLanguages = ['en', 'ta', 'ml', 'hi'];
+            $language = $this->resolveRequestedLanguage($request, $supportedLanguages);
             $query = [
                 'datetime' => $requestedDatetime,
                 'coordinates' => $request->coordinates,
                 'ayanamsa' => (int) ($request->ayanamsa ?? 1),
+                'la' => $language,
             ];
 
             $response = Http::withToken($token)->timeout(25)->get('https://api.prokerala.com/v2/astrology/panchang/advanced', $query);
@@ -583,6 +614,8 @@ class AstrologyController extends Controller
                         'current_karana' => $this->findActiveTimedEntry($data['karana'] ?? [], $reference),
                         'current_yoga' => $this->findActiveTimedEntry($data['yoga'] ?? [], $reference),
                     ],
+                    'language' => $language,
+                    'supported_languages' => $supportedLanguages,
                     'requested_datetime' => $requestedDatetime,
                 ],
             ]);
@@ -764,7 +797,7 @@ class AstrologyController extends Controller
         return $details !== '' ? $details : $fallback;
     }
 
-    private function searchGoogleLocations(string $query): array
+    private function searchGoogleLocations(string $query, string $language = 'en'): array
     {
         $apiKey = env('GOOGLE_MAPS_API_KEY');
         if (!$apiKey) {
@@ -774,7 +807,7 @@ class AstrologyController extends Controller
         $response = Http::timeout(20)->get('https://maps.googleapis.com/maps/api/geocode/json', [
             'address' => $query,
             'key' => $apiKey,
-            'language' => 'en',
+            'language' => $language,
         ]);
 
         if (!$response->successful()) {
@@ -845,6 +878,23 @@ class AstrologyController extends Controller
         return array_values(array_filter($fallbacks, function ($city) use ($query) {
             return stripos($city['name'], $query) !== false;
         }));
+    }
+
+    private function resolveRequestedLanguage(
+        Request $request,
+        array $supportedLanguages,
+        string $default = 'en',
+        string $primaryField = 'la'
+    ): string {
+        $candidate = strtolower((string) (
+            $request->input($primaryField)
+            ?? $request->query($primaryField)
+            ?? $request->input('language')
+            ?? $request->query('language')
+            ?? $default
+        ));
+
+        return in_array($candidate, $supportedLanguages, true) ? $candidate : $default;
     }
 
     private function extractDashaSummary(array $dashaPeriods): array

@@ -12,6 +12,11 @@ import {
   getLalKitabReport 
 } from "../api/prokeralaApi";
 import { useAuth } from "../context/AuthContext";
+import {
+  KUNDLI_LANGUAGE_OPTIONS,
+  getLanguageLabel,
+  getLocaleForLanguage,
+} from "../constants/prokeralaLanguages";
 
 const chartTypeOptions = [
   { value: "rasi", label: "D1 - Rasi Chart" },
@@ -40,12 +45,25 @@ const predictionTypes = [
   { value: "education", label: "Education & Learning", icon: "🎓" },
 ];
 
-const initialDetails = { name: "", dob: "", time: "", place: "", coordinates: "", gender: "Male", chartType: "rasi", chartStyle: "north-indian" };
+const initialDetails = {
+  name: "",
+  dob: "",
+  time: "",
+  place: "",
+  coordinates: "",
+  gender: "Male",
+  chartType: "rasi",
+  chartStyle: "north-indian",
+  language: "en",
+};
 
-const formatDateTime = (value) => {
+const formatDateTime = (value, language = "en") => {
   if (!value) return "-";
   try {
-    return new Date(value).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+    return new Date(value).toLocaleString(getLocaleForLanguage(language), {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
   } catch {
     return value;
   }
@@ -100,7 +118,7 @@ export default function Kundli() {
     if (query.trim().length < 3) return setLocationResults([]);
     try {
       setLoadingLocation(true);
-      const response = await searchLocation(query.trim());
+      const response = await searchLocation(query.trim(), details.language);
       setLocationResults(response?.data || []);
     } catch {
       setLocationResults([]);
@@ -127,6 +145,7 @@ export default function Kundli() {
       const response = await generateKundli(datetime, details.coordinates, 1, {
         chart_type: details.chartType,
         chart_style: details.chartStyle,
+        la: details.language,
       });
       if (response?.status === "success" && response?.data?.kundli) {
         setKundliData(response.data.kundli);
@@ -137,6 +156,8 @@ export default function Kundli() {
           warning: response.data.warning,
           chartMeta: response.data.chart_meta,
           dashaSummary: response.data.dasha_summary || {},
+          language: response.data.language || details.language,
+          supportedLanguages: response.data.supported_languages || [],
         });
         setPremiumData({}); // Reset premium data on new search
         setActiveTab("free"); // Default to free view
@@ -198,6 +219,7 @@ export default function Kundli() {
   const info = birth?.additional_info || {};
   const dosha = kundliData?.mangal_dosha;
   const dasha = apiMeta?.dashaSummary || {};
+  const activeLanguage = apiMeta?.language || details.language;
   const yogas = Array.isArray(kundliData?.yoga_details) ? kundliData.yoga_details : [];
   const activeYogas = yogas.flatMap((group) => (group.yoga_list || []).filter((item) => item.has_yoga).map((item) => ({ ...item, group: group.name })));
   const profileItems = [
@@ -224,12 +246,19 @@ export default function Kundli() {
           <div className="text-center mb-10">
             <h2 className="text-2xl sm:text-3xl font-bold text-[#1E3557]">Birth Chart Details</h2>
             <p className="text-gray-500 mt-2 text-sm">The advanced view includes detailed yogas, dosha notes, and dasha timing.</p>
+            <p className="mt-3 text-xs font-medium text-gray-500">Result language: {getLanguageLabel(details.language)}</p>
           </div>
           <div className="grid md:grid-cols-2 gap-6">
             <input required type="text" value={details.name} onChange={(e) => updateDetails("name", e.target.value)} placeholder="Full Name" className="w-full bg-gray-50 border border-gray-200 px-4 py-3 rounded-xl" />
             <select value={details.gender} onChange={(e) => updateDetails("gender", e.target.value)} className="w-full bg-gray-50 border border-gray-200 px-4 py-3 rounded-xl"><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select>
             <input required type="date" value={details.dob} onChange={(e) => updateDetails("dob", e.target.value)} className="w-full bg-gray-50 border border-gray-200 px-4 py-3 rounded-xl" />
             <input required type="time" value={details.time} onChange={(e) => updateDetails("time", e.target.value)} className="w-full bg-gray-50 border border-gray-200 px-4 py-3 rounded-xl" />
+            <select value={details.language} onChange={(e) => updateDetails("language", e.target.value)} className="w-full bg-gray-50 border border-gray-200 px-4 py-3 rounded-xl">
+              {KUNDLI_LANGUAGE_OPTIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </select>
+            <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500">
+              Kundli translations depend on the modules returned by Prokerala for the selected locale.
+            </div>
             <div className="relative md:col-span-2">
               <input required type="text" value={details.place} onChange={handleLocationChange} placeholder="Birth Place (select from dropdown)" className="w-full bg-gray-50 border border-gray-200 px-4 py-3 rounded-xl pr-10" />
               {loadingLocation && <div className="absolute right-3 top-3.5 h-4 w-4 animate-spin rounded-full border-b-2 border-orange-500"></div>}
@@ -286,8 +315,56 @@ export default function Kundli() {
               {activeTab === "free" ? (
                 <>
                   <div className="text-center">
-                    <h3 className="text-2xl font-bold text-[#1E3557]">Free Kundli Summary</h3>
-                    <p className="mt-2 text-sm text-gray-500">Essential astrological insights based on your birth details.</p>
+                    <h3 className="text-2xl font-bold text-[#1E3557]">Your Kundli Results</h3>
+                    <p className="mt-2 text-sm text-gray-500">Chart: {apiMeta?.chartMeta?.chart_type || details.chartType} in {apiMeta?.chartMeta?.chart_style || details.chartStyle} style</p>
+                    <p className="mt-1 text-xs font-medium uppercase tracking-wide text-gray-400">Locale: {getLanguageLabel(activeLanguage)}</p>
+                  </div>
+
+                  <div className="grid xl:grid-cols-[1.1fr_0.9fr] gap-8">
+                    <div className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-4">
+                      <div className="mb-4"><p className="text-lg font-bold text-[#1E3557]">Birth Chart</p></div>
+                      <div className="flex min-h-[340px] items-center justify-center overflow-x-auto rounded-2xl border border-gray-200 bg-white p-4">
+                        {chartData ? <div dangerouslySetInnerHTML={{ __html: chartData }} className="max-w-full" style={{ minWidth: "300px", minHeight: "300px" }} /> : <p className="text-sm text-gray-500 text-center">Chart image is not available for this response.</p>}
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <div className="rounded-2xl border border-gray-100 bg-white p-5"><p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Moon Sign</p><p className="mt-2 text-xl font-bold text-[#1E3557]">{birth?.chandra_rasi?.name || "-"}</p><p className="mt-1 text-sm text-gray-500">Lord: {birth?.chandra_rasi?.lord?.name || "-"}</p></div>
+                        <div className="rounded-2xl border border-gray-100 bg-white p-5"><p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Sun Sign</p><p className="mt-2 text-xl font-bold text-[#1E3557]">{birth?.soorya_rasi?.name || "-"}</p><p className="mt-1 text-sm text-gray-500">Zodiac: {birth?.zodiac?.name || "-"}</p></div>
+                        <div className="rounded-2xl border border-gray-100 bg-white p-5"><p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Current Maha Dasha</p><p className="mt-2 text-xl font-bold text-[#1E3557]">{dasha.current_mahadasha?.name || kundliData?.dasha_balance?.lord?.name || "-"}</p><p className="mt-1 text-sm text-gray-500">{kundliData?.dasha_balance?.description || "Dasha balance not available."}</p></div>
+                        <div className="rounded-2xl border border-gray-100 bg-white p-5"><p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Active Yogas</p><p className="mt-2 text-xl font-bold text-[#1E3557]">{activeYogas.length}</p><p className="mt-1 text-sm text-gray-500">Detailed list shown below</p></div>
+                      </div>
+                      <div className="rounded-2xl border border-gray-100 bg-white p-5">
+                        <div className="flex items-center gap-2">{dosha?.has_dosha ? <FaExclamationTriangle className="text-orange-500" /> : <FaCheckCircle className="text-emerald-500" />}<h4 className="font-bold text-[#1E3557] text-lg">Mangal Dosha Summary</h4></div>
+                        <p className={`mt-3 text-sm font-semibold ${dosha?.has_dosha ? "text-orange-700" : "text-emerald-700"}`}>{dosha?.type ? `${dosha.type} Manglik` : dosha?.has_dosha ? "Manglik" : "No Mangal Dosha"}</p>
+                        <p className="mt-2 text-sm text-gray-600">{dosha?.description || "No dosha details returned."}</p>
+                        {Array.isArray(dosha?.exceptions) && dosha.exceptions.length > 0 && <div className="mt-4 rounded-xl bg-orange-50 p-4"><p className="font-semibold text-orange-900">Dosha Exceptions</p><ul className="mt-2 space-y-2 text-sm text-orange-800">{dosha.exceptions.slice(0, 3).map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}</ul></div>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+                    <h4 className="text-xl font-bold text-[#1E3557] mb-5">Birth Profile Snapshot</h4>
+                    <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">{profileItems.map(([label, value]) => <div key={label} className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-4"><p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p><p className="mt-2 text-base font-semibold text-[#1E3557]">{value || "-"}</p></div>)}</div>
+                  </div>
+
+                  <div className="grid lg:grid-cols-2 gap-8">
+                    <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+                      <h4 className="text-xl font-bold text-[#1E3557] mb-5">Yoga Details</h4>
+                      <div className="space-y-4">{yogas.map((group) => { const active = (group.yoga_list || []).filter((item) => item.has_yoga); return <div key={group.name} className="rounded-2xl border border-gray-100 bg-[#f8f9fa] p-4"><div className="flex items-start justify-between gap-4"><div><p className="font-semibold text-[#1E3557]">{group.name}</p><p className="mt-1 text-sm text-gray-500">{group.description}</p></div><span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#1E3557] shadow-sm">{active.length} active</span></div><div className="mt-4 space-y-3">{active.length > 0 ? active.map((item) => <div key={`${group.name}-${item.name}`} className="rounded-xl bg-white p-3 border border-gray-100"><p className="font-semibold text-[#1E3557]">{item.name}</p><p className="mt-1 text-sm text-gray-600">{item.description}</p></div>) : <p className="text-sm text-gray-500">No active yoga from this category in the current response.</p>}</div></div>; })}</div>
+                    </div>
+
+                    <div className="space-y-8">
+                      <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+                        <h4 className="text-xl font-bold text-[#1E3557] mb-5">Dasha Timing</h4>
+                        <div className="space-y-4">
+                          {[["Current Maha Dasha", dasha.current_mahadasha], ["Current Antar Dasha", dasha.current_antardasha], ["Current Pratyantar Dasha", dasha.current_pratyantardasha]].map(([label, value]) => <div key={label} className="rounded-2xl bg-[#f8f9fa] p-4 border border-gray-100"><p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p><p className="mt-2 text-lg font-bold text-[#1E3557]">{value?.name || "-"}</p><p className="mt-1 text-sm text-gray-500">{formatDateTime(value?.start, activeLanguage)} to {formatDateTime(value?.end, activeLanguage)}</p></div>)}
+                        </div>
+                        {Array.isArray(dasha.next_mahadasha) && dasha.next_mahadasha.length > 0 && <div className="mt-6"><p className="font-semibold text-[#1E3557] mb-3">Upcoming Maha Dashas</p><div className="space-y-3">{dasha.next_mahadasha.map((period) => <div key={`${period.name}-${period.start}`} className="rounded-xl border border-gray-100 bg-[#f8f9fa] p-3"><div className="flex items-center justify-between gap-4"><p className="font-semibold text-[#1E3557]">{period.name}</p><p className="text-xs text-gray-500">{formatDateTime(period.start, activeLanguage)}</p></div></div>)}</div></div>}
+                      </div>
+                      {Array.isArray(dosha?.remedies) && dosha.remedies.length > 0 && <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm"><h4 className="text-xl font-bold text-[#1E3557] mb-5">Suggested Remedies</h4><ul className="space-y-3 text-sm text-gray-600">{dosha.remedies.slice(0, 6).map((item, index) => <li key={`${item}-${index}`} className="rounded-xl bg-[#f8f9fa] p-4 border border-gray-100">{item}</li>)}</ul></div>}
+                    </div>
                   </div>
                 </>
               ) : (
@@ -395,7 +472,7 @@ export default function Kundli() {
                                         {premiumData.sadesati.transits.map((t, i) => (
                                           <div key={i} className="p-4 rounded-xl border border-gray-100 flex justify-between items-center text-sm">
                                             <span className="font-bold text-[#1E3557]">{t.phase || t.name}</span>
-                                            <span className="text-gray-500">{formatDateTime(t.start)} to {formatDateTime(t.end)}</span>
+                                            <span className="text-gray-500">{formatDateTime(t.start, activeLanguage)} to {formatDateTime(t.end, activeLanguage)}</span>
                                           </div>
                                         ))}
                                       </div>

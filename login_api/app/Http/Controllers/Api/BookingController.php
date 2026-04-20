@@ -215,6 +215,10 @@ class BookingController extends Controller
         $booking->update([
             'status' => 'completed',
             'completed_at' => Carbon::now('Asia/Kolkata'),
+            'session_ended_at' => Carbon::now('Asia/Kolkata'),
+            'session_end_reason' => 'manual_complete',
+            'session_ended_by' => "astrologer:{$user->id}",
+            'session_last_activity_at' => Carbon::now('Asia/Kolkata'),
         ]);
 
         return response()->json([
