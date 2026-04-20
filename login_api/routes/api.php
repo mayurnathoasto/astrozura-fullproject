@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\AdminBookingController;
 use App\Http\Controllers\Api\AdminSubscriptionController;
 use App\Http\Controllers\Api\RitualController;
+use App\Http\Controllers\Api\BookingSessionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -41,6 +42,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/bookings', [BookingController::class, 'store']);
     Route::get('/astrologer/bookings', [BookingController::class, 'astrologerBookings']);
     Route::post('/astrologer/bookings/{id}/complete', [BookingController::class, 'markCompleted']);
+    Route::get('/bookings/{booking}/session', [BookingSessionController::class, 'show']);
+    Route::post('/bookings/{booking}/session/start', [BookingSessionController::class, 'start']);
+    Route::post('/bookings/{booking}/session/end', [BookingSessionController::class, 'end']);
+    Route::post('/bookings/{booking}/session/ping', [BookingSessionController::class, 'ping']);
 
     // User Dashboard Routes
     Route::get('/dashboard/profile', [UserDashboardController::class, 'getProfile']);

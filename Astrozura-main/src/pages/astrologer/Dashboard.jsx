@@ -10,6 +10,7 @@ const formatSchedule = (value) =>
 
 const bookingStatusClass = {
   confirmed: "bg-blue-50 text-blue-700 border-blue-200",
+  in_progress: "bg-amber-50 text-amber-700 border-amber-200",
   completed: "bg-emerald-50 text-emerald-700 border-emerald-200",
   cancelled: "bg-rose-50 text-rose-700 border-rose-200",
   declined: "bg-rose-50 text-rose-700 border-rose-200",
@@ -380,8 +381,16 @@ export default function AstrologerDashboard() {
 
       {booking.notes && <p className="mt-4 rounded-xl bg-[#F8F9FC] px-4 py-3 text-sm text-gray-600">{booking.notes}</p>}
 
-      {allowComplete && booking.status !== "completed" && (
-        <div className="mt-5 flex justify-end">
+      {(allowComplete || !["completed", "cancelled", "declined"].includes(booking.status)) && (
+        <div className="mt-5 flex flex-wrap justify-end gap-3">
+          {!["completed", "cancelled", "declined"].includes(booking.status) && (
+            <Link
+              to={`/session/${booking.id}`}
+              className="rounded-xl border border-[#1E3557] px-5 py-2.5 text-sm font-semibold text-[#1E3557] transition hover:bg-[#1E3557] hover:text-white"
+            >
+              {booking.consultation_type === "call" ? "Open Consultation Room" : "Open Chat Session"}
+            </Link>
+          )}
           <button
             type="button"
             disabled={actionBookingId === booking.id}

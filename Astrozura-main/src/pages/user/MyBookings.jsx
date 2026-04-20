@@ -15,6 +15,7 @@ const formatSchedule = (value) =>
 
 const statusClass = {
   confirmed: "bg-blue-50 text-blue-700 border-blue-200",
+  in_progress: "bg-amber-50 text-amber-700 border-amber-200",
   completed: "bg-emerald-50 text-emerald-700 border-emerald-200",
   cancelled: "bg-rose-50 text-rose-700 border-rose-200",
   declined: "bg-rose-50 text-rose-700 border-rose-200",
@@ -87,6 +88,16 @@ export default function MyBookings() {
         </div>
       </div>
       {booking.notes && <p className="mt-4 rounded-xl bg-[#F8F9FC] px-4 py-3 text-sm text-gray-600">{booking.notes}</p>}
+      {!["completed", "cancelled", "declined"].includes(booking.status) && (
+        <div className="mt-5 flex justify-end">
+          <Link
+            to={`/session/${booking.id}`}
+            className="inline-flex items-center rounded-xl bg-[#1E3557] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#162744]"
+          >
+            {booking.consultation_type === "call" ? "Open Consultation Room" : "Open Chat Session"}
+          </Link>
+        </div>
+      )}
     </div>
   );
 

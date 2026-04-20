@@ -11,6 +11,7 @@ class Booking extends Model
 
     protected $fillable = [
         'booking_reference',
+        'session_room_id',
         'user_id',
         'astrologer_id',
         'user_name',
@@ -29,6 +30,12 @@ class Booking extends Model
         'payment_method',
         'payment_id',
         'completed_at',
+        'session_started_at',
+        'session_ended_at',
+        'session_warning_sent_at',
+        'session_last_activity_at',
+        'session_ended_by',
+        'session_end_reason',
         'notes',
     ];
 
@@ -37,6 +44,10 @@ class Booking extends Model
         'scheduled_at' => 'datetime',
         'ends_at' => 'datetime',
         'completed_at' => 'datetime',
+        'session_started_at' => 'datetime',
+        'session_ended_at' => 'datetime',
+        'session_warning_sent_at' => 'datetime',
+        'session_last_activity_at' => 'datetime',
         'amount' => 'decimal:2',
     ];
 

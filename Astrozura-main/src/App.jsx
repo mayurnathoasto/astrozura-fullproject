@@ -98,6 +98,16 @@ function App() {
               <ChatPage />
             </ProtectedRoute>
           } />
+          <Route path="/chat/:bookingId" element={
+            <ProtectedRoute>
+              <ChatPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/session/:bookingId" element={
+            <ProtectedRoute>
+              <ChatPage />
+            </ProtectedRoute>
+          } />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

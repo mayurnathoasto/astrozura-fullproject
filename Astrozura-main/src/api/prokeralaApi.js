@@ -1,9 +1,9 @@
-import api from './axios';
+import api from "./axios";
 
-export const getDailyHoroscope = async (sign, day = 'today') => {
+export const getDailyHoroscope = async (sign, day = "today", la = "en") => {
   try {
     const response = await api.get(`/prokerala/horoscope/${sign}`, {
-      params: { day }
+      params: { day, la }
     });
     return response.data;
   } catch (error) {
@@ -18,7 +18,7 @@ export const generateKundli = async (datetime, coordinates, ayanamsa = 1, option
       datetime,
       coordinates,
       ayanamsa,
-      ...options
+      ...options,
     });
     return response.data;
   } catch (error) {
@@ -27,10 +27,10 @@ export const generateKundli = async (datetime, coordinates, ayanamsa = 1, option
   }
 };
 
-export const searchLocation = async (query) => {
+export const searchLocation = async (query, language = "en") => {
   try {
     const response = await api.get(`/prokerala/location/search`, {
-      params: { q: query }
+      params: { q: query, language }
     });
     return response.data;
   } catch (error) {
@@ -39,13 +39,20 @@ export const searchLocation = async (query) => {
   }
 };
 
-export const getMarriageMatching = async (girl_coordinates, girl_dob, boy_coordinates, boy_dob) => {
+export const getMarriageMatching = async (
+  girl_coordinates,
+  girl_dob,
+  boy_coordinates,
+  boy_dob,
+  options = {}
+) => {
   try {
     const response = await api.post(`/prokerala/matching`, {
       girl_coordinates,
       girl_dob,
       boy_coordinates,
-      boy_dob
+      boy_dob,
+      ...options,
     });
     return response.data;
   } catch (error) {
@@ -54,12 +61,13 @@ export const getMarriageMatching = async (girl_coordinates, girl_dob, boy_coordi
   }
 };
 
-export const getPanchang = async (datetime, coordinates, ayanamsa = 1) => {
+export const getPanchang = async (datetime, coordinates, ayanamsa = 1, options = {}) => {
   try {
     const response = await api.post(`/prokerala/panchang`, {
       datetime,
       coordinates,
-      ayanamsa
+      ayanamsa,
+      ...options,
     });
     return response.data;
   } catch (error) {
