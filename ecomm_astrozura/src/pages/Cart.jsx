@@ -257,6 +257,3 @@ export default function Cart() {
     </>
   );
 }
-    </>
-  );
-}

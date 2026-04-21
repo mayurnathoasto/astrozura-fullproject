@@ -5,7 +5,11 @@ import { getAstrologerBookings, markBookingCompleted } from "../../api/bookingAp
 
 const formatSchedule = (value) =>
   value
-    ? new Date(value).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })
+    ? new Date(value).toLocaleString("en-IN", {
+        dateStyle: "medium",
+        timeStyle: "short",
+        timeZone: "Asia/Kolkata",
+      })
     : "-";
 
 const bookingStatusClass = {
@@ -14,6 +18,17 @@ const bookingStatusClass = {
   completed: "bg-emerald-50 text-emerald-700 border-emerald-200",
   cancelled: "bg-rose-50 text-rose-700 border-rose-200",
   declined: "bg-rose-50 text-rose-700 border-rose-200",
+};
+
+const formatBirthDetails = (birthDetails) => {
+  if (!birthDetails) return [];
+
+  return [
+    birthDetails.date_of_birth ? `DOB: ${birthDetails.date_of_birth}` : null,
+    birthDetails.time_of_birth ? `Time: ${birthDetails.time_of_birth}` : null,
+    birthDetails.place_of_birth ? `Place: ${birthDetails.place_of_birth}` : null,
+    birthDetails.gender ? `Gender: ${birthDetails.gender}` : null,
+  ].filter(Boolean);
 };
 
 function getNameParts(fullName = "") {
@@ -379,10 +394,47 @@ export default function AstrologerDashboard() {
         </div>
       </div>
 
+      {!!formatBirthDetails(booking.birth_details).length && (
+        <div className="mt-4 rounded-xl border border-[#F1E1B8] bg-[#FFF9EC] px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#D4A73C]">
+            Client Birth Details
+          </p>
+          <div className="mt-2 grid gap-2 text-sm text-[#1E3557]">
+            {formatBirthDetails(booking.birth_details).map((item) => (
+              <p key={item}>{item}</p>
+            ))}
+          </div>
+        </div>
+      )}
+
       {booking.notes && <p className="mt-4 rounded-xl bg-[#F8F9FC] px-4 py-3 text-sm text-gray-600">{booking.notes}</p>}
 
       {(allowComplete || !["completed", "cancelled", "declined"].includes(booking.status)) && (
         <div className="mt-5 flex flex-wrap justify-end gap-3">
+          <a
+            href="/kundli"
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-semibold text-[#1E3557] transition hover:border-[#D4A73C] hover:text-[#D4A73C]"
+          >
+            Kundli Tool
+          </a>
+          <a
+            href="/birth-chart"
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-semibold text-[#1E3557] transition hover:border-[#D4A73C] hover:text-[#D4A73C]"
+          >
+            Birth Chart
+          </a>
+          <a
+            href="/matching"
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-semibold text-[#1E3557] transition hover:border-[#D4A73C] hover:text-[#D4A73C]"
+          >
+            Matchmaking
+          </a>
           {!["completed", "cancelled", "declined"].includes(booking.status) && (
             <Link
               to={`/session/${booking.id}`}

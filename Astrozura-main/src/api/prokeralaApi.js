@@ -128,9 +128,14 @@ export const getPredictions = async (datetime, coordinates, type) => {
   }
 };
 
-export const getNumerologyReport = async (datetime, name) => {
+export const getNumerologyReport = async (payloadOrDatetime, legacyName = "") => {
   try {
-    const response = await api.post('/prokerala/numerology', { datetime, name });
+    const payload =
+      typeof payloadOrDatetime === "object" && payloadOrDatetime !== null
+        ? payloadOrDatetime
+        : { datetime: payloadOrDatetime, name: legacyName };
+
+    const response = await api.post('/prokerala/numerology', payload);
     return response.data;
   } catch (error) {
     console.error("Error fetching numerology report:", error);
@@ -154,6 +159,26 @@ export const getLalKitabReport = async (datetime, coordinates) => {
     return response.data;
   } catch (error) {
     console.error("Error fetching lal kitab report:", error);
+    throw error;
+  }
+};
+
+export const getVedicCalculator = async (calculator, payload) => {
+  try {
+    const response = await api.post(`/prokerala/vedic-calculators/${calculator}`, payload);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching Vedic calculator ${calculator}:`, error);
+    throw error;
+  }
+};
+
+export const getMatchingCalculator = async (calculator, payload) => {
+  try {
+    const response = await api.post(`/prokerala/matching-calculators/${calculator}`, payload);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching matching calculator ${calculator}:`, error);
     throw error;
   }
 };

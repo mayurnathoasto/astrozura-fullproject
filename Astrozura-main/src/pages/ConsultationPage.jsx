@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -43,6 +43,12 @@ export default function ConsultationPage() {
   const [selectedSlot, setSelectedSlot] = useState("");
   const [availability, setAvailability] = useState([]);
   const [notes, setNotes] = useState("");
+  const [birthDetails, setBirthDetails] = useState({
+    date_of_birth: "",
+    time_of_birth: "",
+    place_of_birth: "",
+    gender: "",
+  });
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [step, setStep] = useState("details");
   const [paymentMethod, setPaymentMethod] = useState("upi");
@@ -54,6 +60,26 @@ export default function ConsultationPage() {
     window.clearTimeout(window.__astrozuraBookingToast);
     window.__astrozuraBookingToast = window.setTimeout(() => setToast(null), 3200);
   };
+
+  const loadAvailability = useCallback(async () => {
+    if (!astrologer?.id) return;
+    try {
+      setLoadingSlots(true);
+      const response = await getBookingAvailability({
+        astrologer_id: astrologer.id,
+        consultation_type: consultationType,
+        duration,
+        booking_date: formatDateValue(selectedDate),
+      });
+      setAvailability(response?.slots || []);
+    } catch (error) {
+      console.error("Failed to fetch slots", error);
+      setAvailability([]);
+      showToast(error?.response?.data?.message || "Unable to load slots.", "error");
+    } finally {
+      setLoadingSlots(false);
+    }
+  }, [astrologer?.id, consultationType, duration, selectedDate]);
 
   useEffect(() => {
     const loadAstrologer = async () => {
@@ -75,28 +101,28 @@ export default function ConsultationPage() {
   }, [astrologer, astrologerId]);
 
   useEffect(() => {
-    const loadAvailability = async () => {
-      if (!astrologer?.id) return;
-      try {
-        setLoadingSlots(true);
-        const response = await getBookingAvailability({
-          astrologer_id: astrologer.id,
-          consultation_type: consultationType,
-          duration,
-          booking_date: formatDateValue(selectedDate),
-        });
-        setAvailability(response?.slots || []);
-      } catch (error) {
-        console.error("Failed to fetch slots", error);
-        setAvailability([]);
-        showToast(error?.response?.data?.message || "Unable to load slots.", "error");
-      } finally {
-        setLoadingSlots(false);
-      }
-    };
     setSelectedSlot("");
     void loadAvailability();
-  }, [astrologer?.id, consultationType, duration, selectedDate]);
+  }, [loadAvailability]);
+
+  useEffect(() => {
+    const rawUser = localStorage.getItem("user");
+    if (!rawUser) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(rawUser);
+      setBirthDetails((current) => ({
+        date_of_birth: current.date_of_birth || parsed?.date_of_birth || "",
+        time_of_birth: current.time_of_birth || parsed?.time_of_birth || "",
+        place_of_birth: current.place_of_birth || parsed?.place_of_birth || "",
+        gender: current.gender || parsed?.gender || "",
+      }));
+    } catch (error) {
+      console.error("Failed to prefill consultation birth details", error);
+    }
+  }, []);
 
   const details = astrologer?.astrologer_detail || {};
   const rate = consultationType === "chat" ? Number(details.chat_price || 0) : Number(details.call_price || 0);
@@ -107,6 +133,14 @@ export default function ConsultationPage() {
     if (!astrologer?.id) return showToast("Select an astrologer first.", "error"), false;
     if (!selectedSlot) return showToast("Select an available time slot.", "error"), false;
     return true;
+  };
+
+  const handleBirthDetailChange = (event) => {
+    const { name, value } = event.target;
+    setBirthDetails((current) => ({
+      ...current,
+      [name]: value,
+    }));
   };
 
   const confirmBooking = async () => {
@@ -123,6 +157,7 @@ export default function ConsultationPage() {
         booking_date: formatDateValue(selectedDate),
         booking_time: selectedSlot,
         notes,
+        birth_details: birthDetails,
       });
       if (!response?.success) throw new Error(response?.message || "Booking failed.");
       setConfirmedBooking(response.booking);
@@ -131,6 +166,10 @@ export default function ConsultationPage() {
       window.setTimeout(() => navigate("/my-bookings", { state: { message: "Booking confirmed successfully." } }), 1800);
     } catch (error) {
       console.error(error);
+      if (error?.response?.status === 422) {
+        setSelectedSlot("");
+        await loadAvailability();
+      }
       showToast(error?.response?.data?.message || error.message || "Booking failed.", "error");
       setStep("details");
     } finally {
@@ -153,7 +192,7 @@ export default function ConsultationPage() {
       <div className="min-h-screen bg-[#FFFBF3] px-4 py-8 md:px-10">
         <div className="mx-auto max-w-[1100px]">
           <h1 className="text-3xl font-bold text-[#1E3557]">Book Your Consultation</h1>
-          <p className="mt-2 text-sm text-gray-500">{step === "details" ? "Step 1 of 3: Personalize your session." : step === "payment" ? "Step 2 of 3: Mock payment." : "Step 3 of 3: Booking confirmed."}</p>
+          <p className="mt-2 text-sm text-gray-500">{step === "details" ? "Step 1 of 3: Personalize your session and share birth details." : step === "payment" ? "Step 2 of 3: Mock payment." : "Step 3 of 3: Booking confirmed."}</p>
           <div className="mt-4 h-2 rounded-full bg-[#F3E4BF]"><div className={`h-2 rounded-full bg-[#D4A73C] ${step === "details" ? "w-1/3" : step === "payment" ? "w-2/3" : "w-full"}`}></div></div>
 
           {step === "details" && (
@@ -190,7 +229,63 @@ export default function ConsultationPage() {
                 </section>
 
                 <section>
-                  <h2 className="mb-4 text-lg font-semibold text-[#1E3557]">5. Session Notes</h2>
+                  <h2 className="mb-4 text-lg font-semibold text-[#1E3557]">5. Birth Details for the Astrologer</h2>
+                  <div className="rounded-3xl border border-gray-100 bg-white p-5 shadow-sm">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-gray-600">Date of Birth</label>
+                        <input
+                          type="date"
+                          name="date_of_birth"
+                          value={birthDetails.date_of_birth}
+                          onChange={handleBirthDetailChange}
+                          className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#D4A73C]"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-gray-600">Time of Birth</label>
+                        <input
+                          type="time"
+                          name="time_of_birth"
+                          value={birthDetails.time_of_birth}
+                          onChange={handleBirthDetailChange}
+                          className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#D4A73C]"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-gray-600">Place of Birth</label>
+                        <input
+                          type="text"
+                          name="place_of_birth"
+                          value={birthDetails.place_of_birth}
+                          onChange={handleBirthDetailChange}
+                          placeholder="City, State, Country"
+                          className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#D4A73C]"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-gray-600">Gender</label>
+                        <select
+                          name="gender"
+                          value={birthDetails.gender}
+                          onChange={handleBirthDetailChange}
+                          className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#D4A73C]"
+                        >
+                          <option value="">Select gender</option>
+                          <option value="male">Male</option>
+                          <option value="female">Female</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+                    </div>
+                    <p className="mt-4 text-xs leading-5 text-gray-500">
+                      These details are shared with the astrologer and can be used during kundali, birth-chart, matchmaking, tarot, or palmistry guidance.
+                    </p>
+                  </div>
+                </section>
+
+                <section>
+                  <h2 className="mb-4 text-lg font-semibold text-[#1E3557]">6. Session Notes</h2>
                   <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={4} placeholder="Share what you want guidance on. This is optional." className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-4 text-sm outline-none focus:border-[#D4A73C]" />
                 </section>
               </div>
@@ -204,6 +299,17 @@ export default function ConsultationPage() {
                   <div><p className="text-xs uppercase text-gray-400">Date</p><p className="mt-1 font-semibold text-[#1E3557]">{formatDisplayDate(selectedDate)}</p></div>
                   <div><p className="text-xs uppercase text-gray-400">Time</p><p className="mt-1 font-semibold text-[#1E3557]">{selectedSlot || "Select slot"}</p></div>
                 </div>
+                {(birthDetails.date_of_birth || birthDetails.time_of_birth || birthDetails.place_of_birth || birthDetails.gender) && (
+                  <div className="mt-6 rounded-2xl bg-[#F8F9FC] p-4">
+                    <p className="text-xs uppercase text-gray-400">Birth Details Shared</p>
+                    <div className="mt-3 grid gap-3 text-sm text-[#1E3557]">
+                      {birthDetails.date_of_birth && <p><span className="font-semibold">DOB:</span> {birthDetails.date_of_birth}</p>}
+                      {birthDetails.time_of_birth && <p><span className="font-semibold">Time:</span> {birthDetails.time_of_birth}</p>}
+                      {birthDetails.place_of_birth && <p><span className="font-semibold">Place:</span> {birthDetails.place_of_birth}</p>}
+                      {birthDetails.gender && <p><span className="font-semibold">Gender:</span> {birthDetails.gender}</p>}
+                    </div>
+                  </div>
+                )}
                 <div className="mt-6 border-t border-gray-100 pt-6">
                   <p className="text-xs uppercase text-gray-400">Total Amount Payable</p>
                   <p className="mt-2 text-3xl font-bold text-[#1E3557]">Rs {payableAmount}</p>

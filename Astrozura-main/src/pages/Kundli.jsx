@@ -188,7 +188,21 @@ export default function Kundli() {
           res = await getPredictions(datetime, details.coordinates, activePredictionType);
           break;
         case "numerology":
-          res = await getNumerologyReport(datetime, details.name);
+          {
+            const nameParts = String(details.name || "").trim().split(/\s+/).filter(Boolean);
+            const firstName = nameParts[0] || "";
+            const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
+            const middleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(" ") : "";
+
+            res = await getNumerologyReport({
+              calculator: "maturity-number",
+              system: "pythagorean",
+              date_of_birth: details.dob,
+              first_name: firstName,
+              middle_name: middleName,
+              last_name: lastName,
+            });
+          }
           break;
         case "sadesati":
           res = await getSadesatiReport(datetime, details.coordinates);

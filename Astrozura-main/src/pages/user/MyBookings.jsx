@@ -3,13 +3,14 @@ import { Link, useLocation } from "react-router-dom";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import { useAuth } from "../../context/AuthContext";
-import { getMyBookings } from "../../api/bookingApi";
+import { getMyBookings, getMyRitualBookings } from "../../api/bookingApi";
 
 const formatSchedule = (value) =>
   value
     ? new Date(value).toLocaleString("en-IN", {
         dateStyle: "medium",
         timeStyle: "short",
+        timeZone: "Asia/Kolkata",
       })
     : "-";
 
@@ -21,10 +22,22 @@ const statusClass = {
   declined: "bg-rose-50 text-rose-700 border-rose-200",
 };
 
+const formatBirthDetails = (birthDetails) => {
+  if (!birthDetails) return [];
+
+  return [
+    birthDetails.date_of_birth ? `DOB: ${birthDetails.date_of_birth}` : null,
+    birthDetails.time_of_birth ? `Time: ${birthDetails.time_of_birth}` : null,
+    birthDetails.place_of_birth ? `Place: ${birthDetails.place_of_birth}` : null,
+    birthDetails.gender ? `Gender: ${birthDetails.gender}` : null,
+  ].filter(Boolean);
+};
+
 export default function MyBookings() {
   const { user } = useAuth();
   const location = useLocation();
   const [bookings, setBookings] = useState({ upcoming: [], history: [] });
+  const [ritualBookings, setRitualBookings] = useState({ upcoming: [], history: [] });
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState(location.state?.message || "");
 
@@ -32,10 +45,18 @@ export default function MyBookings() {
     const loadBookings = async () => {
       try {
         setLoading(true);
-        const response = await getMyBookings();
+        const [consultationResponse, ritualResponse] = await Promise.all([
+          getMyBookings(),
+          getMyRitualBookings(),
+        ]);
+
         setBookings({
-          upcoming: response?.upcoming || [],
-          history: response?.history || [],
+          upcoming: consultationResponse?.upcoming || [],
+          history: consultationResponse?.history || [],
+        });
+        setRitualBookings({
+          upcoming: ritualResponse?.upcoming || [],
+          history: ritualResponse?.history || [],
         });
       } catch (error) {
         console.error("Failed to load bookings", error);
@@ -87,6 +108,16 @@ export default function MyBookings() {
           <p className="mt-1 font-semibold text-[#1E3557]">{booking.payment_status}</p>
         </div>
       </div>
+      {!!formatBirthDetails(booking.birth_details).length && (
+        <div className="mt-4 rounded-xl border border-[#F1E1B8] bg-[#FFF9EC] px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#D4A73C]">Birth Details Shared</p>
+          <div className="mt-2 grid gap-2 text-sm text-[#1E3557]">
+            {formatBirthDetails(booking.birth_details).map((item) => (
+              <p key={item}>{item}</p>
+            ))}
+          </div>
+        </div>
+      )}
       {booking.notes && <p className="mt-4 rounded-xl bg-[#F8F9FC] px-4 py-3 text-sm text-gray-600">{booking.notes}</p>}
       {!["completed", "cancelled", "declined"].includes(booking.status) && (
         <div className="mt-5 flex justify-end">
@@ -100,6 +131,74 @@ export default function MyBookings() {
       )}
     </div>
   );
+
+  const renderRitualBookingCard = (booking) => {
+    const scheduleDate = booking.confirmed_date || booking.preferred_date;
+    const scheduleTime = booking.confirmed_time || booking.preferred_time || "-";
+    const venueLabel = {
+      online: "Online Guidance",
+      temple: "Temple Arrangement",
+      client_place: "At Client Location",
+    }[booking.venue_type] || booking.venue_type || "Ritual";
+
+    return (
+      <div key={`ritual-${booking.id}`} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#D4A73C]">
+              {booking.booking_reference}
+            </p>
+            <h3 className="mt-2 text-lg font-bold text-[#1E3557]">{booking.ritual?.name || "Ritual Booking"}</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              {venueLabel}
+              {booking.astrologer?.name ? ` with ${booking.astrologer.name}` : ""}
+            </p>
+          </div>
+          <span className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase ${statusClass[booking.status] || "bg-slate-100 text-slate-600 border-slate-200"}`}>
+            {booking.status}
+          </span>
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-3 text-sm">
+          <div>
+            <p className="text-xs uppercase text-gray-400">Preferred Schedule</p>
+            <p className="mt-1 font-semibold text-[#1E3557]">{scheduleDate || "-"}</p>
+            <p className="mt-1 text-gray-500">{scheduleTime}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase text-gray-400">Location</p>
+            <p className="mt-1 font-semibold text-[#1E3557]">
+              {[booking.location_city, booking.location_state].filter(Boolean).join(", ") || "-"}
+            </p>
+            {booking.location_pincode && <p className="mt-1 text-gray-500">{booking.location_pincode}</p>}
+          </div>
+          <div>
+            <p className="text-xs uppercase text-gray-400">Amount</p>
+            <p className="mt-1 font-semibold text-[#1E3557]">Rs {booking.amount}</p>
+          </div>
+        </div>
+
+        {booking.location_address && (
+          <div className="mt-4 rounded-xl bg-[#F8F9FC] px-4 py-3 text-sm text-gray-600">
+            {booking.location_address}
+          </div>
+        )}
+
+        {booking.admin_response && (
+          <div className="mt-4 rounded-xl border border-[#F1E1B8] bg-[#FFF9EC] px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#D4A73C]">Admin Response</p>
+            <p className="mt-2 text-sm leading-6 text-[#1E3557]">{booking.admin_response}</p>
+          </div>
+        )}
+
+        {booking.notes && (
+          <div className="mt-4 rounded-xl bg-[#F8F9FC] px-4 py-3 text-sm text-gray-600">
+            {booking.notes}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="bg-[#f8f9fa] min-h-screen flex flex-col font-sans">
@@ -157,12 +256,40 @@ export default function MyBookings() {
 
               <section className="rounded-2xl border border-gray-100 bg-white p-6 md:p-8">
                 <div className="mb-6 border-b border-gray-100 pb-5">
+                  <h2 className="text-xl font-bold text-[#1E3557]">Upcoming Ritual Bookings</h2>
+                  <p className="text-sm text-gray-500 mt-1">Pooja and anusthan requests submitted for admin confirmation.</p>
+                </div>
+                <div className="space-y-4">
+                  {ritualBookings.upcoming.length > 0 ? ritualBookings.upcoming.map(renderRitualBookingCard) : (
+                    <div className="rounded-xl border border-dashed border-gray-200 bg-[#f8f9fa] px-6 py-12 text-center">
+                      <h4 className="text-lg font-bold text-[#1E3557]">No active ritual bookings</h4>
+                      <p className="mt-2 text-sm text-gray-500">Book a pooja or anusthan to see its scheduling status here.</p>
+                      <Link to="/rituals" className="mt-5 inline-block rounded-xl bg-[#1E3557] px-6 py-3 text-sm font-semibold text-white">Explore Rituals</Link>
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-gray-100 bg-white p-6 md:p-8">
+                <div className="mb-6 border-b border-gray-100 pb-5">
                   <h2 className="text-xl font-bold text-[#1E3557]">Booking History</h2>
                   <p className="text-sm text-gray-500 mt-1">Completed and past sessions remain listed for reference.</p>
                 </div>
                 <div className="space-y-4">
                   {bookings.history.length > 0 ? bookings.history.map(renderBookingCard) : (
                     <p className="text-sm text-gray-500">No completed or past consultations yet.</p>
+                  )}
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-gray-100 bg-white p-6 md:p-8">
+                <div className="mb-6 border-b border-gray-100 pb-5">
+                  <h2 className="text-xl font-bold text-[#1E3557]">Ritual Booking History</h2>
+                  <p className="text-sm text-gray-500 mt-1">Past ritual requests and completed arrangements remain visible here.</p>
+                </div>
+                <div className="space-y-4">
+                  {ritualBookings.history.length > 0 ? ritualBookings.history.map(renderRitualBookingCard) : (
+                    <p className="text-sm text-gray-500">No completed or past ritual bookings yet.</p>
                   )}
                 </div>
               </section>

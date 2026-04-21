@@ -51,7 +51,7 @@ class BookingSessionController extends Controller
         $startWindow = optional($booking->scheduled_at)?->copy()->subMinutes(config('zego.session.join_grace_before_minutes', 10));
         $endWindow = optional($booking->ends_at)?->copy()->addMinutes(config('zego.session.join_grace_after_minutes', 15));
 
-        if (!$startWindow || !$endWindow || !$now->betweenIncluded($startWindow, $endWindow)) {
+        if (!$this->isSessionTestMode() && (!$startWindow || !$endWindow || !$now->betweenIncluded($startWindow, $endWindow))) {
             return response()->json([
                 'success' => false,
                 'message' => 'This consultation can only be started near the booked slot.',
@@ -170,21 +170,28 @@ class BookingSessionController extends Controller
     {
         $timezone = $booking->timezone ?: 'Asia/Kolkata';
         $now = Carbon::now($timezone);
+        $testingMode = $this->isSessionTestMode();
         $joinGraceBefore = config('zego.session.join_grace_before_minutes', 10);
         $joinGraceAfter = config('zego.session.join_grace_after_minutes', 15);
         $lowTimeWarningSeconds = config('zego.session.low_time_warning_seconds', 120);
 
         $scheduledAt = $booking->scheduled_at?->copy()->timezone($timezone);
         $endsAt = $booking->ends_at?->copy()->timezone($timezone);
-        $joinStartsAt = $scheduledAt?->copy()->subMinutes($joinGraceBefore);
-        $joinEndsAt = $endsAt?->copy()->addMinutes($joinGraceAfter);
+        $joinStartsAt = $testingMode
+            ? ($booking->created_at?->copy()->timezone($timezone) ?: $scheduledAt?->copy()->subDay())
+            : $scheduledAt?->copy()->subMinutes($joinGraceBefore);
+        $joinEndsAt = $testingMode
+            ? $endsAt?->copy()->addDay()
+            : $endsAt?->copy()->addMinutes($joinGraceAfter);
 
         $remainingSeconds = $endsAt ? max(0, $now->diffInSeconds($endsAt, false)) : 0;
         $isAstrologer = (int) $booking->astrologer_id === $viewerId;
         $isUser = (int) $booking->user_id === $viewerId;
         $isLive = $booking->status === 'in_progress';
         $isClosed = in_array($booking->status, $this->closedStatuses, true);
-        $withinJoinWindow = $joinStartsAt && $joinEndsAt ? $now->betweenIncluded($joinStartsAt, $joinEndsAt) : false;
+        $withinJoinWindow = $testingMode
+            ? !$isClosed
+            : ($joinStartsAt && $joinEndsAt ? $now->betweenIncluded($joinStartsAt, $joinEndsAt) : false);
         $canStart = $isAstrologer && !$isClosed && !$isLive && $withinJoinWindow;
         $canJoin = !$isClosed && $withinJoinWindow;
         $canEnd = $isAstrologer && $isLive && !$isClosed;
@@ -197,12 +204,14 @@ class BookingSessionController extends Controller
         return [
             'state' => $isClosed ? 'closed' : ($isLive ? 'live' : ($canJoin ? 'ready' : 'scheduled')),
             'is_live' => $isLive,
+            'test_mode' => $testingMode,
             'can_start' => $canStart,
             'can_join' => $canJoin,
             'can_end' => $canEnd,
             'remaining_seconds' => $remainingSeconds,
             'needs_low_time_warning' => $needsLowTimeWarning,
             'scheduled_at' => $scheduledAt?->toIso8601String(),
+            'scheduled_end_at' => $endsAt?->toIso8601String(),
             'join_window' => [
                 'starts_at' => $joinStartsAt?->toIso8601String(),
                 'ends_at' => $joinEndsAt?->toIso8601String(),
@@ -266,5 +275,10 @@ class BookingSessionController extends Controller
         }
 
         return $booking->user_name ?: "User {$viewerId}";
+    }
+
+    private function isSessionTestMode(): bool
+    {
+        return (bool) config('zego.session.test_mode', false);
     }
 }

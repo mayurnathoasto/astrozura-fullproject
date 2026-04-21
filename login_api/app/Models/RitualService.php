@@ -46,4 +46,9 @@ class RitualService extends Model
     {
         return $this->belongsTo(User::class, 'assigned_astrologer_id');
     }
+
+    public function bookings()
+    {
+        return $this->hasMany(RitualBooking::class, 'ritual_service_id');
+    }
 }

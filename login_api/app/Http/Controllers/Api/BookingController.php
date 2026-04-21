@@ -63,6 +63,11 @@ class BookingController extends Controller
             'booking_date'      => 'required|date',
             'booking_time'      => 'required|string',
             'notes'             => 'nullable|string|max:1000',
+            'birth_details' => 'nullable|array',
+            'birth_details.date_of_birth' => 'nullable|date',
+            'birth_details.time_of_birth' => 'nullable|string|max:50',
+            'birth_details.place_of_birth' => 'nullable|string|max:255',
+            'birth_details.gender' => 'nullable|in:male,female,other',
         ]);
 
         $user = $request->user();
@@ -115,6 +120,7 @@ class BookingController extends Controller
             'payment_status' => 'paid',
             'payment_method' => 'mock_gateway',
             'notes' => $validated['notes'] ?? null,
+            'birth_details' => $this->extractBirthDetails($validated['birth_details'] ?? null),
         ]);
 
         $booking->update([
@@ -173,7 +179,10 @@ class BookingController extends Controller
             'history' => $history,
             'stats' => [
                 'today_bookings' => $bookings->filter(function ($booking) use ($now) {
-                    return optional($booking->scheduled_at)->timezone('Asia/Kolkata')?->isSameDay($now);
+                    return optional($booking->scheduled_at)
+                        ?->copy()
+                        ->timezone($booking->timezone ?: 'Asia/Kolkata')
+                        ?->isSameDay($now);
                 })->count(),
                 'active_sessions' => $bookings->filter(function ($booking) use ($now) {
                     return in_array($booking->status, $this->blockingStatuses, true)
@@ -186,7 +195,10 @@ class BookingController extends Controller
                     ->filter(function ($booking) use ($now) {
                         return $booking->payment_status === 'paid'
                             && $booking->scheduled_at
-                            && $booking->scheduled_at->isSameMonth($now);
+                            && $booking->scheduled_at
+                                ->copy()
+                                ->timezone($booking->timezone ?: 'Asia/Kolkata')
+                                ->isSameMonth($now);
                     })
                     ->sum('amount'),
             ],
@@ -245,19 +257,22 @@ class BookingController extends Controller
 
     private function hasOverlappingBooking(int $astrologerId, Carbon $start, Carbon $end): bool
     {
+        $startUtc = $start->copy()->utc();
+        $endUtc = $end->copy()->utc();
+
         return Booking::where('astrologer_id', $astrologerId)
             ->whereIn('status', $this->blockingStatuses)
-            ->where(function ($query) use ($start, $end) {
-                $query->where('scheduled_at', '<', $end)
-                    ->where('ends_at', '>', $start);
+            ->where(function ($query) use ($startUtc, $endUtc) {
+                $query->where('scheduled_at', '<', $endUtc)
+                    ->where('ends_at', '>', $startUtc);
             })
             ->exists();
     }
 
     private function generateAvailabilitySlots(int $astrologerId, Carbon $day, int $duration, string $timezone): array
     {
-        $slotStart = $day->copy()->setTime(10, 0);
-        $slotEnd = $day->copy()->setTime(21, 0);
+        $slotStart = $day->copy()->startOfDay();
+        $slotEnd = $day->copy()->endOfDay();
         $now = Carbon::now($timezone);
         $slots = [];
 
@@ -290,5 +305,21 @@ class BookingController extends Controller
         }
 
         return $booking->scheduled_at ? $booking->scheduled_at->greaterThanOrEqualTo($now) : false;
+    }
+
+    private function extractBirthDetails(?array $birthDetails): ?array
+    {
+        if (!$birthDetails) {
+            return null;
+        }
+
+        $normalized = array_filter([
+            'date_of_birth' => $birthDetails['date_of_birth'] ?? null,
+            'time_of_birth' => $birthDetails['time_of_birth'] ?? null,
+            'place_of_birth' => $birthDetails['place_of_birth'] ?? null,
+            'gender' => $birthDetails['gender'] ?? null,
+        ], fn ($value) => $value !== null && $value !== '');
+
+        return $normalized === [] ? null : $normalized;
     }
 }

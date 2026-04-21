@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use App\Support\MediaStorage;
 use Illuminate\Http\Request;
 
 class AdminEcommController extends Controller
@@ -31,9 +32,7 @@ class AdminEcommController extends Controller
         $category->name = $request->name;
 
         if ($request->hasFile('image')) {
-            $imageName = time() . '.' . $request->image->extension();
-            $request->image->move(public_path('uploads/categories'), $imageName);
-            $category->image = 'uploads/categories/' . $imageName;
+            $category->image = MediaStorage::store($request->file('image'), 'categories');
         }
 
         $category->status = $request->has('status') ? filter_var($request->status, FILTER_VALIDATE_BOOLEAN) : 1;
@@ -63,9 +62,7 @@ class AdminEcommController extends Controller
         $category->name = $request->name;
 
         if ($request->hasFile('image')) {
-            $imageName = time() . '.' . $request->image->extension();
-            $request->image->move(public_path('uploads/categories'), $imageName);
-            $category->image = 'uploads/categories/' . $imageName;
+            $category->image = MediaStorage::store($request->file('image'), 'categories');
         }
 
         if ($request->has('status')) {
@@ -119,9 +116,7 @@ class AdminEcommController extends Controller
         $product->price = $request->price;
 
         if ($request->hasFile('image')) {
-            $imageName = time() . '.' . $request->image->extension();
-            $request->image->move(public_path('uploads/products'), $imageName);
-            $product->image = 'uploads/products/' . $imageName;
+            $product->image = MediaStorage::store($request->file('image'), 'products');
         }
 
         $product->is_trending = $request->has('is_trending') ? filter_var($request->is_trending, FILTER_VALIDATE_BOOLEAN) : 0;
@@ -163,9 +158,7 @@ class AdminEcommController extends Controller
         $product->price = $request->price;
 
         if ($request->hasFile('image')) {
-            $imageName = time() . '.' . $request->image->extension();
-            $request->image->move(public_path('uploads/products'), $imageName);
-            $product->image = 'uploads/products/' . $imageName;
+            $product->image = MediaStorage::store($request->file('image'), 'products');
         }
 
         if ($request->has('is_trending')) {

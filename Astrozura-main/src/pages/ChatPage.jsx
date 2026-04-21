@@ -5,6 +5,7 @@ import {
   FaBolt,
   FaClock,
   FaComments,
+  FaImage,
   FaMicrophone,
   FaMicrophoneSlash,
   FaPaperPlane,
@@ -18,6 +19,7 @@ import {
 import { ZIM, ZIMConversationType, ZIMMessagePriority, ZIMMessageType } from "zego-zim-web";
 import { ZegoExpressEngine } from "zego-express-engine-webrtc";
 
+import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import {
   endBookingSession,
@@ -31,6 +33,8 @@ const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/
   ""
 );
 const CLOSED_STATUSES = new Set(["completed", "cancelled", "declined"]);
+const IMAGE_MESSAGE_PREFIX = "[[image]]";
+const ZEGO_STANDARD_VIDEO_CALL_SCENARIO = 4;
 
 const resolveImageUrl = (path) => {
   if (!path) return "";
@@ -43,6 +47,7 @@ const formatDateTime = (value) =>
     ? new Date(value).toLocaleString("en-IN", {
         dateStyle: "medium",
         timeStyle: "short",
+        timeZone: "Asia/Kolkata",
       })
     : "-";
 
@@ -71,30 +76,116 @@ const getRealtimeErrorMessage = (error, fallback) => {
   return error?.message || error?.response?.data?.message || fallback;
 };
 
+const getCallErrorMessage = (error) => {
+  const code = Number(error?.code ?? error?.response?.data?.code ?? error?.errorCode);
+
+  if (code === 1103064) {
+    return "Microphone permission is blocked in the browser. Allow microphone access and try again.";
+  }
+
+  if (code === 1103065) {
+    return "The microphone is unavailable or already in use by another application.";
+  }
+
+  if (code === 1103061) {
+    return "The browser could not capture microphone audio. Check device permissions and browser access.";
+  }
+
+  return error?.message || "Audio call could not be started.";
+};
+
+const ensureMicrophoneAccess = async () => {
+  if (!navigator?.mediaDevices?.getUserMedia) {
+    throw new Error("This browser does not support microphone capture APIs.");
+  }
+
+  let testStream = null;
+
+  try {
+    testStream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: false,
+    });
+  } catch (error) {
+    const errorName = error?.name;
+
+    if (errorName === "NotAllowedError" || errorName === "SecurityError") {
+      throw new Error("Microphone permission is blocked in the browser. Allow microphone access and try again.");
+    }
+
+    if (errorName === "NotFoundError") {
+      throw new Error("No microphone device was found on this system.");
+    }
+
+    if (errorName === "NotReadableError" || errorName === "AbortError") {
+      throw new Error("The browser could not capture microphone audio. Check device permissions and browser access.");
+    }
+
+    throw error;
+  } finally {
+    testStream?.getTracks?.().forEach((track) => track.stop());
+  }
+};
+
 const getBookingId = (params, location) => {
   if (params.bookingId) return params.bookingId;
   const search = new URLSearchParams(location.search);
   return search.get("booking");
 };
 
-const getDisplayMessageText = (message) => {
+const parseMessagePayload = (message) => {
   if (message?.type === ZIMMessageType.Text && typeof message.message === "string") {
-    return message.message;
+    const text = message.message.trim();
+
+    if (text.startsWith(IMAGE_MESSAGE_PREFIX)) {
+      return {
+        kind: "image",
+        text: "Image attachment",
+        mediaUrl: text.slice(IMAGE_MESSAGE_PREFIX.length).trim(),
+      };
+    }
+
+    return {
+      kind: "text",
+      text,
+      mediaUrl: "",
+    };
   }
 
-  return "[Unsupported message]";
+  return {
+    kind: "text",
+    text: "[Unsupported message]",
+    mediaUrl: "",
+  };
 };
 
-const mapChatMessage = (message, selfUserId) => ({
-  id:
-    message?.messageID ||
-    message?.localMessageID ||
-    `${message?.senderUserID || "unknown"}-${message?.timestamp || Date.now()}`,
-  senderUserId: message?.senderUserID || "",
-  text: getDisplayMessageText(message),
-  timestamp: message?.timestamp || Date.now(),
-  isSelf: message?.senderUserID === selfUserId,
-});
+const formatBirthDetails = (birthDetails) => {
+  if (!birthDetails) return [];
+
+  return [
+    birthDetails.date_of_birth ? `DOB: ${birthDetails.date_of_birth}` : null,
+    birthDetails.time_of_birth ? `Time: ${birthDetails.time_of_birth}` : null,
+    birthDetails.place_of_birth ? `Place: ${birthDetails.place_of_birth}` : null,
+    birthDetails.gender ? `Gender: ${birthDetails.gender}` : null,
+  ].filter(Boolean);
+};
+
+const mapChatMessage = (message, selfUserId) => {
+  const payload = parseMessagePayload(message);
+
+  return {
+    id:
+      message?.messageID ||
+      message?.localMessageID ||
+      `${message?.senderUserID || "unknown"}-${message?.timestamp || Date.now()}`,
+    senderUserId: message?.senderUserID || "",
+    text: payload.text,
+    kind: payload.kind,
+    mediaUrl: payload.mediaUrl,
+    timestamp: message?.timestamp || Date.now(),
+    isSelf: message?.senderUserID === selfUserId,
+  };
+};
 
 export default function ChatPage() {
   const { bookingId: routeBookingId } = useParams();
@@ -114,6 +205,7 @@ export default function ChatPage() {
   const [chatReady, setChatReady] = useState(false);
   const [chatStatus, setChatStatus] = useState("Connecting to room...");
   const [sending, setSending] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [startingSession, setStartingSession] = useState(false);
   const [endingSession, setEndingSession] = useState(false);
   const [callLoading, setCallLoading] = useState(false);
@@ -134,6 +226,8 @@ export default function ChatPage() {
   const pollTimerRef = useRef(null);
   const pingTimerRef = useRef(null);
   const chatSyncTimerRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const callAutoJoinKeyRef = useRef("");
 
   const isAstrologerViewer =
     user?.id && booking ? Number(user.id) === Number(booking.astrologer_id) : user?.role === "astrologer";
@@ -143,13 +237,62 @@ export default function ChatPage() {
   }, [booking, isAstrologerViewer]);
   const astrologerDetail =
     booking?.astrologer?.astrologer_detail || booking?.astrologer?.astrologerDetail || null;
-  const viewerZegoId = session?.viewer?.zego_user_id || "";
-  const canOpenChat = Boolean(session?.can_join && session?.zego?.chat);
-  const isClosed = CLOSED_STATUSES.has(booking?.status) || session?.state === "closed";
   const callEnabled = booking?.consultation_type === "call";
+  const viewerZegoId = session?.viewer?.zego_user_id || "";
+  const chatServiceEnabled = !callEnabled && Boolean(session?.zego?.chat);
+  const canOpenChat = Boolean(session?.can_join && chatServiceEnabled);
+  const isClosed = CLOSED_STATUSES.has(booking?.status) || session?.state === "closed";
   const canJoinCall = Boolean(callEnabled && session?.can_join && session?.zego?.call);
   const showLowTimeWarning = Boolean(session?.needs_low_time_warning && session?.remaining_seconds > 0);
   const backHref = isAstrologerViewer ? "/astrologer/dashboard" : "/my-bookings";
+  const scheduledStartLabel = formatDateTime(session?.scheduled_at || booking?.scheduled_at);
+  const scheduledEndLabel = formatDateTime(session?.scheduled_end_at || booking?.ends_at);
+  const sessionHeadline = useMemo(() => {
+    if (isClosed) {
+      return "This consultation has ended.";
+    }
+
+    if (callEnabled) {
+      if (session?.is_live) {
+        return "Audio consultation is live now.";
+      }
+
+      if (isAstrologerViewer && session?.can_start) {
+        return "Start the call when you are ready.";
+      }
+
+      if (!isAstrologerViewer && session?.can_join) {
+        return "Waiting for the astrologer to start the call.";
+      }
+
+      return "Audio consultation is scheduled.";
+    }
+
+    if (chatReady) {
+      return "Live chat is active.";
+    }
+
+    if (session?.can_join) {
+      return "Chat room access is open.";
+    }
+
+    return "Chat room access is scheduled.";
+  }, [callEnabled, chatReady, isAstrologerViewer, isClosed, session?.can_join, session?.can_start, session?.is_live]);
+  const sessionSummary = useMemo(() => {
+    const testingNote = session?.test_mode
+      ? " Testing mode is enabled, so this booking can be opened before the exact slot."
+      : "";
+
+    if (callEnabled) {
+      return `Scheduled start: ${scheduledStartLabel}. Scheduled end: ${scheduledEndLabel}.${testingNote}`;
+    }
+
+    if (chatReady) {
+      return `Scheduled start: ${scheduledStartLabel}. Scheduled end: ${scheduledEndLabel}. Messages and attachments are live.${testingNote}`;
+    }
+
+    return `Scheduled start: ${scheduledStartLabel}. Scheduled end: ${scheduledEndLabel}.${testingNote}`;
+  }, [callEnabled, chatReady, scheduledEndLabel, scheduledStartLabel, session?.test_mode]);
 
   useEffect(() => {
     scrollAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -417,7 +560,11 @@ export default function ChatPage() {
 
     const callConfig = currentSession.zego.call;
     const serverList = [callConfig.server_url, callConfig.secondary_server_url].filter(Boolean);
-    const engine = new ZegoExpressEngine(callConfig.app_id, serverList);
+    const engine = new ZegoExpressEngine(callConfig.app_id, serverList, {
+      scenario: ZEGO_STANDARD_VIDEO_CALL_SCENARIO,
+    });
+
+    engine.setRoomScenario(ZEGO_STANDARD_VIDEO_CALL_SCENARIO);
 
     engine.on("roomStateUpdate", (_roomId, state, errorCode) => {
       if (state === "CONNECTED") {
@@ -473,6 +620,12 @@ export default function ChatPage() {
         }
       }
     });
+
+    const capability = await engine.checkSystemRequirements("webRTC");
+
+    if (capability?.webRTC === false || capability?.result === false) {
+      throw new Error("This browser does not support ZEGO WebRTC calls in the current environment.");
+    }
 
     await engine.loginRoom(
       currentSession.rooms.call,
@@ -533,7 +686,7 @@ export default function ChatPage() {
       setBooking(response.booking);
       setSession(response.session);
 
-      if (response.session?.can_join && response.session?.zego?.chat) {
+      if (response.booking?.consultation_type !== "call" && response.session?.can_join && response.session?.zego?.chat) {
         try {
           await ensureChatConnection(response.booking, response.session);
         } catch (error) {
@@ -624,6 +777,12 @@ export default function ChatPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!bookingId) {
+      callAutoJoinKeyRef.current = "";
+    }
+  }, [bookingId]);
+
   const handleStartSession = async () => {
     if (!bookingId) return null;
 
@@ -694,6 +853,58 @@ export default function ChatPage() {
     }
   };
 
+  const handleSendImage = async (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file || !chatReady || !zimRef.current || !session?.rooms?.chat) {
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+
+      const payload = new FormData();
+      payload.append("image", file);
+
+      const uploadResponse = await api.post("/media/chat-image", payload, {
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      const imageUrl = uploadResponse.data?.url;
+
+      if (!imageUrl) {
+        throw new Error("Image upload did not return a valid URL.");
+      }
+
+      const result = await zimRef.current.sendMessage(
+        {
+          type: ZIMMessageType.Text,
+          message: `${IMAGE_MESSAGE_PREFIX}${imageUrl}`,
+        },
+        session.rooms.chat,
+        ZIMConversationType.Room,
+        {
+          priority: ZIMMessagePriority.Low,
+        }
+      );
+
+      const sentMessage = mapChatMessage(result.message, viewerZegoId);
+      mergeMessages([sentMessage]);
+      await loadHistoryMessages(zimRef.current, session);
+      setBanner("Image sent.");
+    } catch (error) {
+      console.error("Failed to send chat image", error);
+      setBanner(error?.response?.data?.message || error?.message || "Image could not be sent.");
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
   const handleJoinAudioCall = async () => {
     if (!canJoinCall) {
       setBanner("Audio call is not available yet.");
@@ -707,6 +918,15 @@ export default function ChatPage() {
 
       let activeSession = session;
 
+      if (!activeSession?.is_live && !isAstrologerViewer) {
+        setBanner("Waiting for the astrologer to start the consultation.");
+        setCallState("idle");
+        setCallStatus("Waiting for the astrologer to start the consultation.");
+        return;
+      }
+
+      await ensureMicrophoneAccess();
+
       if (!activeSession?.is_live && isAstrologerViewer && activeSession?.can_start) {
         const started = await handleStartSession();
         if (!started) {
@@ -715,25 +935,52 @@ export default function ChatPage() {
         activeSession = started.session;
       }
 
-      if (!activeSession?.is_live && !isAstrologerViewer) {
-        setBanner("Waiting for the astrologer to start the consultation.");
-        setCallState("idle");
-        setCallStatus("Waiting for the astrologer to start the consultation.");
-        return;
-      }
-
       const engine = await connectAudioRoom(activeSession);
       await startLocalAudio(engine, activeSession);
     } catch (error) {
       console.error("Failed to join audio call", error);
       destroyCallConnection(session?.rooms?.call || "");
+      const message = getCallErrorMessage(error);
       setCallState("error");
-      setCallStatus(error?.message || "Audio call could not be started.");
-      setBanner(error?.message || "Audio call could not be started.");
+      setCallStatus(message);
+      setBanner(message);
     } finally {
       setCallLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!callEnabled || isClosed || !canJoinCall || callLoading || zegoEngineRef.current) {
+      return;
+    }
+
+    if (!isAstrologerViewer && !session?.is_live) {
+      return;
+    }
+
+    const autoJoinKey = [
+      bookingId,
+      session?.state || "unknown",
+      session?.is_live ? "live" : "pending",
+      isAstrologerViewer ? "astrologer" : "user",
+    ].join(":");
+
+    if (callAutoJoinKeyRef.current === autoJoinKey) {
+      return;
+    }
+
+    callAutoJoinKeyRef.current = autoJoinKey;
+    void handleJoinAudioCall();
+  }, [
+    bookingId,
+    callEnabled,
+    callLoading,
+    canJoinCall,
+    isAstrologerViewer,
+    isClosed,
+    session?.is_live,
+    session?.state,
+  ]);
 
   const handleLeaveAudioCall = () => {
     destroyCallConnection(session?.rooms?.call || "");
@@ -828,6 +1075,28 @@ export default function ChatPage() {
           </div>
         )}
 
+        <div className="rounded-3xl border border-[#D9E3F3] bg-white px-5 py-5 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D4A73C]">
+                {callEnabled ? "Audio Consultation" : "Chat Consultation"}
+              </p>
+              <h2 className="mt-2 text-2xl font-bold text-[#1E3557]">{sessionHeadline}</h2>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-gray-600">{sessionSummary}</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl bg-[#F8F9FC] px-4 py-3 text-sm">
+                <p className="text-xs uppercase tracking-wide text-gray-400">Scheduled Start</p>
+                <p className="mt-1 font-semibold text-[#1E3557]">{scheduledStartLabel}</p>
+              </div>
+              <div className="rounded-2xl bg-[#F8F9FC] px-4 py-3 text-sm">
+                <p className="text-xs uppercase tracking-wide text-gray-400">Scheduled End</p>
+                <p className="mt-1 font-semibold text-[#1E3557]">{scheduledEndLabel}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {pageError && (
           <div className="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700 shadow-sm">
             {pageError}
@@ -847,26 +1116,58 @@ export default function ChatPage() {
                     <FaComments />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-[#1E3557]">Live Consultation Chat</h2>
-                    <p className="text-sm text-gray-500">{chatStatus}</p>
+                    <h2 className="text-lg font-bold text-[#1E3557]">
+                      {callEnabled ? "Consultation Messages" : "Live Consultation Chat"}
+                    </h2>
+                    <p className="text-sm text-gray-500">
+                      {callEnabled
+                        ? chatReady
+                          ? "Backup chat is ready for notes, links, and image sharing during the call."
+                          : "Use the audio controls on the right. This chat becomes available once the room connects."
+                        : chatStatus}
+                    </p>
                   </div>
                 </div>
                 <span className="rounded-full bg-[#F8F9FC] px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-[#1E3557]">
-                  {booking?.consultation_type === "call" ? "Audio + Chat" : "Chat"}
+                  {booking?.consultation_type === "call" ? "Backup Chat" : "Chat"}
                 </span>
               </div>
 
               <div className="flex-1 overflow-y-auto px-5 py-5">
-                {!canOpenChat ? (
+                {!session?.can_join ? (
                   <div className="flex h-full min-h-[320px] items-center justify-center">
                     <div className="max-w-md text-center">
                       <p className="text-xl font-bold text-[#1E3557]">
-                        {isClosed ? "This consultation is closed." : "Chat room opens at the session window."}
+                        {isClosed
+                          ? "This consultation is closed."
+                          : callEnabled
+                            ? "The call room is scheduled and not live yet."
+                            : "Chat room access is not open yet."}
                       </p>
                       <p className="mt-3 text-sm leading-6 text-gray-500">
                         {isClosed
                           ? "The live connection is no longer active, but the booking summary remains available."
-                          : "Open the room close to the scheduled time. The astrologer can start the consultation once the booking window opens."}
+                          : "The astrologer can open the consultation from this screen. Once the booking is live, both participants can use the room."}
+                      </p>
+                    </div>
+                  </div>
+                ) : !chatServiceEnabled ? (
+                  <div className="flex h-full min-h-[320px] items-center justify-center">
+                    <div className="max-w-md text-center">
+                      <p className="text-xl font-bold text-[#1E3557]">Live chat service is unavailable.</p>
+                      <p className="mt-3 text-sm leading-6 text-gray-500">
+                        The booking is open, but the ZEGO chat project is not responding for this session right now.
+                      </p>
+                    </div>
+                  </div>
+                ) : !chatReady ? (
+                  <div className="flex h-full min-h-[320px] items-center justify-center">
+                    <div className="max-w-md text-center">
+                      <p className="text-xl font-bold text-[#1E3557]">
+                        {callEnabled ? "Connecting backup chat..." : "Connecting live chat..."}
+                      </p>
+                      <p className="mt-3 text-sm leading-6 text-gray-500">
+                        {chatStatus}
                       </p>
                     </div>
                   </div>
@@ -884,7 +1185,20 @@ export default function ChatPage() {
                               : "border border-gray-100 bg-[#F8F9FC] text-[#1E3557]"
                           }`}
                         >
-                          <p className="leading-6">{message.text}</p>
+                          {message.kind === "image" && message.mediaUrl ? (
+                            <a href={message.mediaUrl} target="_blank" rel="noreferrer" className="block">
+                              <img
+                                src={message.mediaUrl}
+                                alt="Chat attachment"
+                                className="max-h-64 w-full rounded-2xl object-cover"
+                              />
+                              <p className={`mt-3 text-xs font-semibold ${message.isSelf ? "text-white/80" : "text-[#D4A73C]"}`}>
+                                Open full image
+                              </p>
+                            </a>
+                          ) : (
+                            <p className="leading-6">{message.text}</p>
+                          )}
                           <p
                             className={`mt-2 text-[11px] ${
                               message.isSelf ? "text-white/70" : "text-gray-400"
@@ -902,7 +1216,9 @@ export default function ChatPage() {
                     <div className="max-w-md text-center">
                       <p className="text-xl font-bold text-[#1E3557]">No messages yet</p>
                       <p className="mt-3 text-sm leading-6 text-gray-500">
-                        This room is ready. The first message sent here will appear live for both the user and astrologer.
+                        {callEnabled
+                          ? "The call is ready. Use this backup chat to share notes, links, and images during the consultation."
+                          : "This room is ready. The first message sent here will appear live for both the user and astrologer."}
                       </p>
                     </div>
                   </div>
@@ -911,6 +1227,22 @@ export default function ChatPage() {
 
               <div className="border-t border-gray-100 px-5 py-4">
                 <div className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-[#F8F9FC] px-4 py-3">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => void handleSendImage(event)}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={!chatReady || isClosed || uploadingImage}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 bg-white text-[#1E3557] transition hover:border-[#D4A73C] hover:text-[#D4A73C] disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label="Upload image"
+                  >
+                    <FaImage />
+                  </button>
                   <input
                     type="text"
                     value={draft}
@@ -921,16 +1253,22 @@ export default function ChatPage() {
                         void handleSendMessage();
                       }
                     }}
-                    disabled={!chatReady || isClosed || sending}
+                    disabled={!chatReady || isClosed || sending || uploadingImage}
                     placeholder={
-                      chatReady ? "Type your message here..." : "Chat becomes active when the session window opens."
+                      chatReady
+                        ? callEnabled
+                          ? "Send a note, link, or follow-up message..."
+                          : "Type your message here..."
+                        : session?.can_join
+                          ? "Connecting live chat..."
+                          : "Chat becomes active when the consultation opens."
                     }
                     className="flex-1 bg-transparent text-sm text-[#1E3557] outline-none placeholder:text-gray-400 disabled:cursor-not-allowed"
                   />
                   <button
                     type="button"
                     onClick={() => void handleSendMessage()}
-                    disabled={!chatReady || isClosed || sending || !draft.trim()}
+                    disabled={!chatReady || isClosed || sending || uploadingImage || !draft.trim()}
                     className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#D4A73C] text-[#1E3557] transition hover:bg-[#c49530] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <FaPaperPlane />
@@ -999,6 +1337,56 @@ export default function ChatPage() {
                     {booking.notes}
                   </div>
                 )}
+
+                {!!formatBirthDetails(booking?.birth_details).length && (
+                  <div className="mt-4 rounded-2xl border border-[#F1E1B8] bg-[#FFF9EC] px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D4A73C]">
+                      Birth Details
+                    </p>
+                    <div className="mt-3 grid gap-2 text-sm text-[#1E3557]">
+                      {formatBirthDetails(booking?.birth_details).map((item) => (
+                        <p key={item}>{item}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {isAstrologerViewer && (
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <a
+                      href="/kundli"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-2xl border border-gray-200 px-4 py-3 text-center text-sm font-semibold text-[#1E3557] transition hover:border-[#D4A73C] hover:text-[#D4A73C]"
+                    >
+                      Kundli Tool
+                    </a>
+                    <a
+                      href="/birth-chart"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-2xl border border-gray-200 px-4 py-3 text-center text-sm font-semibold text-[#1E3557] transition hover:border-[#D4A73C] hover:text-[#D4A73C]"
+                    >
+                      Birth Chart
+                    </a>
+                    <a
+                      href="/matching"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-2xl border border-gray-200 px-4 py-3 text-center text-sm font-semibold text-[#1E3557] transition hover:border-[#D4A73C] hover:text-[#D4A73C]"
+                    >
+                      Matchmaking
+                    </a>
+                    <a
+                      href="/services/tarot-reading"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-2xl border border-gray-200 px-4 py-3 text-center text-sm font-semibold text-[#1E3557] transition hover:border-[#D4A73C] hover:text-[#D4A73C]"
+                    >
+                      Tarot Reading
+                    </a>
+                  </div>
+                )}
               </div>
 
               <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -1008,7 +1396,9 @@ export default function ChatPage() {
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-[#1E3557]">Session Controls</h3>
-                    <p className="text-sm text-gray-500">{callEnabled ? callStatus : "Chat-only consultation."}</p>
+                    <p className="text-sm text-gray-500">
+                      {callEnabled ? callStatus : "Live chat consultation controls."}
+                    </p>
                   </div>
                 </div>
 
@@ -1099,8 +1489,22 @@ export default function ChatPage() {
                 <h3 className="text-lg font-bold text-[#1E3557]">Session Metadata</h3>
                 <div className="mt-5 space-y-3 text-sm">
                   <div className="flex items-start justify-between gap-3">
+                    <span className="text-gray-500">Scheduled Start</span>
+                    <span className="text-right font-semibold text-[#1E3557]">{scheduledStartLabel}</span>
+                  </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-gray-500">Scheduled End</span>
+                    <span className="text-right font-semibold text-[#1E3557]">{scheduledEndLabel}</span>
+                  </div>
+                  <div className="flex items-start justify-between gap-3">
                     <span className="text-gray-500">Booking Status</span>
                     <span className="font-semibold capitalize text-[#1E3557]">{booking?.status || "-"}</span>
+                  </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-gray-500">Access Mode</span>
+                    <span className="text-right font-semibold text-[#1E3557]">
+                      {session?.test_mode ? "Testing window open" : "Slot-based access"}
+                    </span>
                   </div>
                   <div className="flex items-start justify-between gap-3">
                     <span className="text-gray-500">Join Window Opens</span>

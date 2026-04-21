@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { FaBriefcase, FaHeartbeat, FaHeart, FaMagic } from "react-icons/fa";
@@ -20,8 +21,12 @@ const zodiacs = [
 ];
 
 export default function Rashifal() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedSign, setSelectedSign] = useState(null);
-  const [activeTab, setActiveTab] = useState("today");
+  const initialPeriod = searchParams.get("period");
+  const [activeTab, setActiveTab] = useState(
+    ["yesterday", "today", "tomorrow"].includes(initialPeriod) ? initialPeriod : "today"
+  );
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -55,6 +60,7 @@ export default function Rashifal() {
 
   const handleTabChange = (day) => {
     setActiveTab(day);
+    setSearchParams({ period: day });
     if (selectedSign) {
       fetchHoroscope(selectedSign.name, day);
     }

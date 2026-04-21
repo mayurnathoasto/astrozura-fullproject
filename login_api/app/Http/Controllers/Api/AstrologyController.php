@@ -667,22 +667,305 @@ class AstrologyController extends Controller
         return $this->proxyProkeralaRequest("https://api.prokerala.com/v2/astrology/prediction/{$type}", $query);
     }
 
+    public function getVedicCalculator(Request $request, string $calculator)
+    {
+        $configs = $this->getVedicCalculatorConfigs();
+        if (!isset($configs[$calculator])) {
+            return response()->json(['status' => 'error', 'message' => 'Unsupported Vedic calculator.'], 404);
+        }
+
+        $request->validate([
+            'datetime' => 'required|string',
+            'coordinates' => 'required|string',
+            'ayanamsa' => 'nullable|integer|in:1,3,5',
+            'la' => 'nullable|string',
+            'year' => 'nullable|integer|min:1900|max:2100',
+            'planet' => 'nullable|integer',
+            'chart_style' => 'nullable|string|in:north-indian,south-indian,east-indian',
+            'detailed_report' => 'nullable|boolean',
+            'planets' => 'nullable|string',
+        ]);
+
+        try {
+            $token = $this->getAccessToken();
+            $config = $configs[$calculator];
+            $ayanamsa = (int) ($request->input('ayanamsa') ?: 1);
+            $language = $request->input('la', 'en');
+            $requestedDatetime = $this->normalizeIsoDatetime($request->input('datetime'));
+
+            $query = [
+                'datetime' => $requestedDatetime,
+                'coordinates' => $request->input('coordinates'),
+                'ayanamsa' => $ayanamsa,
+                'la' => $language,
+            ];
+
+            if (!empty($config['requires_year'])) {
+                $query['year'] = (int) ($request->input('year') ?: now('Asia/Kolkata')->year);
+            }
+
+            if (!empty($config['requires_planet'])) {
+                $query['planet'] = (int) $request->input('planet', 0);
+            }
+
+            if (!empty($config['requires_chart_style'])) {
+                $query['chart_style'] = $request->input('chart_style', 'north-indian');
+            }
+
+            if (!empty($config['supports_planets_filter']) && $request->filled('planets')) {
+                $query['planets'] = $request->input('planets');
+            }
+
+            $path = $config['path'];
+            if (!empty($config['supports_advanced']) && filter_var($request->input('detailed_report', false), FILTER_VALIDATE_BOOLEAN)) {
+                $path .= '/advanced';
+            }
+
+            $response = Http::withToken($token)
+                ->timeout(25)
+                ->when(!empty($config['returns_svg']), fn ($client) => $client->accept('image/svg+xml'))
+                ->get('https://api.prokerala.com/v2' . $path, $query);
+
+            $effectiveDatetime = $requestedDatetime;
+            $warnings = [];
+
+            if ($this->isSandboxDateRestriction($response)) {
+                $effectiveDatetime = $this->toSandboxDatetime($requestedDatetime);
+                $query['datetime'] = $effectiveDatetime;
+                $warnings[] = 'The current Prokerala app is responding in sandbox mode, so only January 1 of the selected year is allowed for date-based astrology calculations.';
+                $response = Http::withToken($token)
+                    ->timeout(25)
+                    ->when(!empty($config['returns_svg']), fn ($client) => $client->accept('image/svg+xml'))
+                    ->get('https://api.prokerala.com/v2' . $path, $query);
+            }
+
+            if (!$response->successful()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $this->extractProkeralaError($response, 'Failed to fetch Vedic calculator result.'),
+                ], 200);
+            }
+
+            $data = !empty($config['returns_svg']) ? ['svg' => $response->body()] : $response->json('data');
+
+            if (!empty($config['companion_chart_path'])) {
+                $chartResponse = Http::withToken($token)
+                    ->accept('image/svg+xml')
+                    ->timeout(25)
+                    ->get('https://api.prokerala.com/v2' . $config['companion_chart_path'], $query);
+
+                if ($chartResponse->successful()) {
+                    $data = [
+                        'chart_data' => $data,
+                        'chart_svg' => $chartResponse->body(),
+                    ];
+                }
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $data,
+                'meta' => [
+                    'calculator' => $calculator,
+                    'requested_datetime' => $requestedDatetime,
+                    'effective_datetime' => $effectiveDatetime,
+                    'is_sandbox_demo' => !empty($warnings),
+                    'warning' => $warnings ? implode(' ', array_unique($warnings)) : null,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 200);
+        }
+    }
+
+    public function getMatchingCalculator(Request $request, string $calculator)
+    {
+        $configs = $this->getMatchingCalculatorConfigs();
+        if (!isset($configs[$calculator])) {
+            return response()->json(['status' => 'error', 'message' => 'Unsupported matching calculator.'], 404);
+        }
+
+        $request->validate([
+            'girl_coordinates' => 'nullable|string',
+            'girl_dob' => 'nullable|string',
+            'boy_coordinates' => 'nullable|string',
+            'boy_dob' => 'nullable|string',
+            'girl_nakshatra' => 'nullable|integer|min:0|max:26',
+            'girl_nakshatra_pada' => 'nullable|integer|min:1|max:4',
+            'boy_nakshatra' => 'nullable|integer|min:0|max:26',
+            'boy_nakshatra_pada' => 'nullable|integer|min:1|max:4',
+            'ayanamsa' => 'nullable|integer|in:1,3,5',
+            'system' => 'nullable|string|in:tamil,kerala',
+            'detailed_report' => 'nullable|boolean',
+            'la' => 'nullable|string',
+        ]);
+
+        try {
+            $token = $this->getAccessToken();
+            $config = $configs[$calculator];
+            $language = $request->input('la', 'en');
+            $warnings = [];
+            $query = ['la' => $language];
+
+            if ($config['input'] === 'nakshatra') {
+                $query = array_merge($query, [
+                    'girl_nakshatra' => (int) $request->input('girl_nakshatra', 0),
+                    'girl_nakshatra_pada' => (int) $request->input('girl_nakshatra_pada', 1),
+                    'boy_nakshatra' => (int) $request->input('boy_nakshatra', 0),
+                    'boy_nakshatra_pada' => (int) $request->input('boy_nakshatra_pada', 1),
+                ]);
+            } else {
+                $query = array_merge($query, [
+                    'girl_coordinates' => $request->input('girl_coordinates'),
+                    'girl_dob' => $this->normalizeIsoDatetime($request->input('girl_dob')),
+                    'boy_coordinates' => $request->input('boy_coordinates'),
+                    'boy_dob' => $this->normalizeIsoDatetime($request->input('boy_dob')),
+                    'ayanamsa' => (int) ($request->input('ayanamsa') ?: 1),
+                ]);
+
+                if (!empty($config['requires_system'])) {
+                    $query['system'] = $request->input('system', 'tamil');
+                }
+            }
+
+            $path = $config['path'];
+            if (!empty($config['supports_advanced']) && filter_var($request->input('detailed_report', false), FILTER_VALIDATE_BOOLEAN)) {
+                $path .= '/advanced';
+            }
+
+            $response = Http::withToken($token)
+                ->timeout(25)
+                ->get('https://api.prokerala.com/v2' . $path, $query);
+
+            if ($config['input'] === 'nakshatra' && $this->isSandboxNakshatraRestriction($response)) {
+                $query['girl_nakshatra'] = 0;
+                $query['boy_nakshatra'] = 0;
+                $warnings[] = 'The current Prokerala app is responding in sandbox mode, so only Ashwini nakshatra is accepted for nakshatra-based matching calculators.';
+                $response = Http::withToken($token)
+                    ->timeout(25)
+                    ->get('https://api.prokerala.com/v2' . $path, $query);
+            }
+
+            if ($config['input'] === 'birth_profiles' && $this->isSandboxDateRestriction($response)) {
+                $query['girl_dob'] = $this->toSandboxDatetime($query['girl_dob']);
+                $query['boy_dob'] = $this->toSandboxDatetime($query['boy_dob']);
+                $warnings[] = 'The current Prokerala app is responding in sandbox mode, so only January 1 of the selected year is allowed for date-based matching calculations.';
+                $response = Http::withToken($token)
+                    ->timeout(25)
+                    ->get('https://api.prokerala.com/v2' . $path, $query);
+            }
+
+            if (!$response->successful()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $this->extractProkeralaError($response, 'Failed to fetch matching calculator result.'),
+                ], 200);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $response->json('data'),
+                'meta' => [
+                    'calculator' => $calculator,
+                    'is_sandbox_demo' => !empty($warnings),
+                    'warning' => $warnings ? implode(' ', array_unique($warnings)) : null,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 200);
+        }
+    }
+
     /**
      * Get Numerology Report.
      */
     public function getNumerology(Request $request)
     {
+        $configs = $this->getNumerologyCalculatorConfigs();
         $request->validate([
-            'datetime' => 'required|string',
-            'name' => 'required|string',
+            'calculator' => 'nullable|string|in:' . implode(',', array_keys($configs)),
+            'system' => 'nullable|string|in:pythagorean,chaldean',
+            'date_of_birth' => 'nullable|date',
+            'time_of_birth' => 'nullable|date_format:H:i',
+            'first_name' => 'nullable|string|max:255',
+            'middle_name' => 'nullable|string|max:255',
+            'last_name' => 'nullable|string|max:255',
+            'reference_year' => 'nullable|integer|min:1900|max:2100',
+            'additional_vowel' => 'nullable|boolean',
+            'datetime' => 'nullable|string',
+            'name' => 'nullable|string|max:255',
         ]);
 
-        $query = [
-            'datetime' => $this->normalizeIsoDatetime($request->datetime),
-            'name' => $request->name,
-        ];
+        try {
+            $token = $this->getAccessToken();
+            $calculator = $request->input('calculator');
+            if (!$calculator) {
+                $calculator = $request->filled('datetime') && $request->filled('name')
+                    ? 'maturity-number'
+                    : 'life-path-number';
+            }
+            $config = $configs[$calculator];
 
-        return $this->proxyProkeralaRequest('https://api.prokerala.com/v2/numerology/report', $query);
+            $requestData = $this->buildNumerologyRequestData($request, $config);
+            $query = $requestData['query'];
+            $requestedDatetime = $requestData['requested_datetime'];
+            $requestedNames = $requestData['requested_names'];
+            $effectiveDatetime = $requestedDatetime;
+            $effectiveNames = $requestedNames;
+            $warnings = [];
+
+            $response = Http::withToken($token)
+                ->timeout(25)
+                ->get("https://api.prokerala.com/v2{$config['path']}", $query);
+
+            if ($this->isSandboxDateRestriction($response) && isset($query['datetime'])) {
+                $effectiveDatetime = $this->toSandboxDatetime($query['datetime']);
+                $query['datetime'] = $effectiveDatetime;
+                $warnings[] = 'The current Prokerala numerology app is responding in sandbox mode, so only January 1 of the selected year is allowed for date-based numerology calculations.';
+                $response = Http::withToken($token)
+                    ->timeout(25)
+                    ->get("https://api.prokerala.com/v2{$config['path']}", $query);
+            }
+
+            if ($this->isSandboxNumerologyNameRestriction($response) && $this->numerologyRequestUsesNames($query)) {
+                $effectiveNames = $this->applySandboxNumerologyNames($query);
+                $query = array_merge($query, $effectiveNames);
+                $warnings[] = 'The current Prokerala numerology app is responding in sandbox mode, so only test names are accepted for name-based numerology calculations.';
+                $response = Http::withToken($token)
+                    ->timeout(25)
+                    ->get("https://api.prokerala.com/v2{$config['path']}", $query);
+            }
+
+            if (!$response->successful()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $this->extractProkeralaError($response, 'Failed to fetch numerology report.'),
+                ], 200);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $response->json('data'),
+                'meta' => [
+                    'calculator' => $calculator,
+                    'calculator_label' => $config['label'],
+                    'system' => $config['system'],
+                    'requested_datetime' => $requestedDatetime,
+                    'effective_datetime' => $effectiveDatetime,
+                    'requested_names' => $requestedNames,
+                    'effective_names' => $effectiveNames,
+                    'is_sandbox_demo' => !empty($warnings),
+                    'warning' => $warnings ? implode(' ', array_unique($warnings)) : null,
+                ],
+            ]);
+        } catch (\InvalidArgumentException $exception) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $exception->getMessage(),
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 200);
+        }
     }
 
     /**
@@ -756,6 +1039,328 @@ class AstrologyController extends Controller
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 200);
         }
+    }
+
+    private function getNumerologyCalculatorConfigs(): array
+    {
+        return [
+            'life-path-number' => [
+                'label' => 'Life Path Number',
+                'system' => 'pythagorean',
+                'path' => '/numerology/life-path-number',
+                'requires_datetime' => true,
+            ],
+            'birthday-number' => [
+                'label' => 'Birthday Number',
+                'system' => 'pythagorean',
+                'path' => '/numerology/birthday-number',
+                'requires_datetime' => true,
+            ],
+            'birth-month-number' => [
+                'label' => 'Birth Month Number',
+                'system' => 'pythagorean',
+                'path' => '/numerology/birth-month-number',
+                'requires_datetime' => true,
+            ],
+            'expression-number' => [
+                'label' => 'Expression Number',
+                'system' => 'pythagorean',
+                'path' => '/numerology/expression-number',
+                'requires_names' => true,
+            ],
+            'soul-urge-number' => [
+                'label' => 'Soul Urge Number',
+                'system' => 'pythagorean',
+                'path' => '/numerology/soul-urge-number',
+                'requires_names' => true,
+                'requires_additional_vowel' => true,
+            ],
+            'personality-number' => [
+                'label' => 'Personality Number',
+                'system' => 'pythagorean',
+                'path' => '/numerology/personality-number',
+                'requires_names' => true,
+                'requires_additional_vowel' => true,
+            ],
+            'maturity-number' => [
+                'label' => 'Maturity Number',
+                'system' => 'pythagorean',
+                'path' => '/numerology/maturity-number',
+                'requires_datetime' => true,
+                'requires_names' => true,
+            ],
+            'personal-year-number' => [
+                'label' => 'Personal Year Number',
+                'system' => 'pythagorean',
+                'path' => '/numerology/personal-year-number',
+                'requires_datetime' => true,
+                'requires_reference_year' => true,
+            ],
+            'personal-month-number' => [
+                'label' => 'Personal Month Number',
+                'system' => 'pythagorean',
+                'path' => '/numerology/personal-month-number',
+                'requires_datetime' => true,
+                'requires_reference_year' => true,
+            ],
+            'personal-day-number' => [
+                'label' => 'Personal Day Number',
+                'system' => 'pythagorean',
+                'path' => '/numerology/personal-day-number',
+                'requires_datetime' => true,
+                'requires_reference_year' => true,
+            ],
+            'chaldean-life-path-number' => [
+                'label' => 'Chaldean Life Path Number',
+                'system' => 'chaldean',
+                'path' => '/numerology/chaldean/life-path-number',
+                'requires_datetime' => true,
+            ],
+            'chaldean-birth-number' => [
+                'label' => 'Chaldean Birth Number',
+                'system' => 'chaldean',
+                'path' => '/numerology/chaldean/birth-number',
+                'requires_datetime' => true,
+            ],
+            'whole-name-number' => [
+                'label' => 'Whole Name Number',
+                'system' => 'chaldean',
+                'path' => '/numerology/chaldean/whole-name-number',
+                'requires_names' => true,
+            ],
+            'daily-name-number' => [
+                'label' => 'Daily Name Number',
+                'system' => 'chaldean',
+                'path' => '/numerology/chaldean/daily-name-number',
+                'requires_names' => true,
+            ],
+            'identity-initial-code-number' => [
+                'label' => 'Identity Initial Code Number',
+                'system' => 'chaldean',
+                'path' => '/numerology/chaldean/identity-initial-code-number',
+                'requires_names' => true,
+            ],
+        ];
+    }
+
+    private function getVedicCalculatorConfigs(): array
+    {
+        return [
+            'mangal-dosha' => [
+                'path' => '/astrology/mangal-dosha',
+                'supports_advanced' => true,
+            ],
+            'kaal-sarp-dosha' => [
+                'path' => '/astrology/kaal-sarp-dosha',
+            ],
+            'papasamyam' => [
+                'path' => '/astrology/papasamyam',
+            ],
+            'planet-position' => [
+                'path' => '/astrology/planet-position',
+                'supports_planets_filter' => true,
+            ],
+            'sade-sati' => [
+                'path' => '/astrology/sade-sati',
+                'supports_advanced' => true,
+            ],
+            'yoga' => [
+                'path' => '/astrology/yoga',
+            ],
+            'dasha-periods' => [
+                'path' => '/astrology/dasha-periods',
+            ],
+            'planet-relationship' => [
+                'path' => '/astrology/planet-relationship',
+            ],
+            'ashtakavarga' => [
+                'path' => '/astrology/ashtakavarga',
+                'requires_planet' => true,
+                'requires_chart_style' => true,
+            ],
+            'sarvashtakavarga' => [
+                'path' => '/astrology/sarvashtakavarga',
+                'requires_chart_style' => true,
+                'companion_chart_path' => '/astrology/sarvashtakavarga-chart',
+            ],
+            'sudarshana-chakra' => [
+                'path' => '/astrology/sudarshana-chakra',
+                'returns_svg' => true,
+            ],
+            'chandrashtama-periods' => [
+                'path' => '/astrology/chandrashtama-periods',
+                'requires_year' => true,
+            ],
+            'gowri-nalla-neram' => [
+                'path' => '/astrology/gowri-nalla-neram',
+            ],
+            'birth-details' => [
+                'path' => '/astrology/birth-details',
+            ],
+        ];
+    }
+
+    private function getMatchingCalculatorConfigs(): array
+    {
+        return [
+            'nakshatra-porutham' => [
+                'path' => '/astrology/nakshatra-porutham',
+                'input' => 'nakshatra',
+                'supports_advanced' => true,
+            ],
+            'thirumana-porutham' => [
+                'path' => '/astrology/thirumana-porutham',
+                'input' => 'nakshatra',
+                'supports_advanced' => true,
+            ],
+            'porutham' => [
+                'path' => '/astrology/porutham',
+                'input' => 'birth_profiles',
+                'supports_advanced' => true,
+                'requires_system' => true,
+            ],
+            'papasamyam-check' => [
+                'path' => '/astrology/papasamyam-check',
+                'input' => 'birth_profiles',
+            ],
+        ];
+    }
+
+    private function buildNumerologyRequestData(Request $request, array $config): array
+    {
+        $query = [];
+        $requestedDatetime = null;
+        $requestedNames = null;
+
+        if (!empty($config['requires_datetime'])) {
+            $requestedDatetime = $this->resolveNumerologyDatetime($request);
+            $query['datetime'] = $requestedDatetime;
+        }
+
+        if (!empty($config['requires_names'])) {
+            $names = $this->resolveNumerologyNames($request);
+            $requestedNames = $names;
+            $query['first_name'] = $names['first_name'];
+            $query['middle_name'] = $names['middle_name'];
+            $query['last_name'] = $names['last_name'];
+        }
+
+        if (!empty($config['requires_reference_year'])) {
+            $query['reference_year'] = (int) ($request->input('reference_year') ?: now('Asia/Kolkata')->year);
+        }
+
+        if (!empty($config['requires_additional_vowel'])) {
+            $query['additional_vowel'] = filter_var($request->input('additional_vowel', false), FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false';
+        }
+
+        return [
+            'query' => $query,
+            'requested_datetime' => $requestedDatetime,
+            'requested_names' => $requestedNames,
+        ];
+    }
+
+    private function resolveNumerologyDatetime(Request $request): string
+    {
+        if ($request->filled('datetime')) {
+            return $this->normalizeIsoDatetime($request->input('datetime'));
+        }
+
+        if (!$request->filled('date_of_birth')) {
+            throw new \InvalidArgumentException('Date of birth is required for the selected numerology calculator.');
+        }
+
+        $time = $request->input('time_of_birth', '12:00');
+        return $this->normalizeIsoDatetime($request->input('date_of_birth') . 'T' . $time . ':00+05:30');
+    }
+
+    private function resolveNumerologyNames(Request $request): array
+    {
+        if ($request->filled('first_name') || $request->filled('last_name')) {
+            if (!$request->filled('first_name')) {
+                throw new \InvalidArgumentException('First name is required for the selected numerology calculator.');
+            }
+
+            return [
+                'first_name' => trim((string) $request->input('first_name')),
+                'middle_name' => trim((string) $request->input('middle_name', '')),
+                'last_name' => trim((string) $request->input('last_name', '')),
+            ];
+        }
+
+        $name = trim((string) $request->input('name', ''));
+        if ($name === '') {
+            throw new \InvalidArgumentException('Name details are required for the selected numerology calculator.');
+        }
+
+        $parts = preg_split('/\s+/', $name);
+        $firstName = array_shift($parts) ?: '';
+        $lastName = count($parts) > 0 ? array_pop($parts) : '';
+        $middleName = implode(' ', $parts);
+
+        return [
+            'first_name' => $firstName,
+            'middle_name' => $middleName,
+            'last_name' => $lastName,
+        ];
+    }
+
+    private function numerologyRequestUsesNames(array $query): bool
+    {
+        return !empty($query['first_name']) || !empty($query['middle_name']) || !empty($query['last_name']);
+    }
+
+    private function isSandboxNumerologyNameRestriction(Response $response): bool
+    {
+        if ($response->successful()) {
+            return false;
+        }
+
+        $details = collect($response->json('errors', []))
+            ->pluck('detail')
+            ->filter()
+            ->implode(' ');
+
+        return stripos($details, 'only these test names are allowed') !== false;
+    }
+
+    private function isSandboxNakshatraRestriction(Response $response): bool
+    {
+        if ($response->successful()) {
+            return false;
+        }
+
+        $details = collect($response->json('errors', []))
+            ->pluck('detail')
+            ->filter()
+            ->implode(' ');
+
+        return stripos($details, 'only the `Ashwini') !== false || stripos($details, 'only Ashwini') !== false;
+    }
+
+    private function applySandboxNumerologyNames(array $query): array
+    {
+        $allowedNames = ['alice', 'bob', 'charlie', 'diana', 'eve', 'frank', 'grace', 'heidi', 'ivan', 'judy'];
+        $mapped = [];
+
+        foreach (['first_name', 'middle_name', 'last_name'] as $index => $field) {
+            $value = trim((string) ($query[$field] ?? ''));
+
+            if ($value === '') {
+                $mapped[$field] = '';
+                continue;
+            }
+
+            $lower = strtolower($value);
+            if (in_array($lower, $allowedNames, true)) {
+                $mapped[$field] = $lower;
+                continue;
+            }
+
+            $mapped[$field] = $allowedNames[crc32($lower . $field) % count($allowedNames)];
+        }
+
+        return $mapped;
     }
 
     private function normalizeIsoDatetime(string $datetime): string

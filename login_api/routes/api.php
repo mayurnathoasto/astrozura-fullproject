@@ -12,7 +12,9 @@ use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\AdminBookingController;
 use App\Http\Controllers\Api\AdminSubscriptionController;
 use App\Http\Controllers\Api\RitualController;
+use App\Http\Controllers\Api\RitualBookingController;
 use App\Http\Controllers\Api\BookingSessionController;
+use App\Http\Controllers\Api\MediaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -40,12 +42,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/profile', [ApiAuthController::class, 'getAdminProfile']);
     Route::post('/admin/profile/update', [ApiAuthController::class, 'updateAdminProfile']);
     Route::post('/bookings', [BookingController::class, 'store']);
+    Route::post('/rituals/{ritual}/book', [RitualBookingController::class, 'store']);
+    Route::get('/my-ritual-bookings', [RitualBookingController::class, 'myBookings']);
     Route::get('/astrologer/bookings', [BookingController::class, 'astrologerBookings']);
     Route::post('/astrologer/bookings/{id}/complete', [BookingController::class, 'markCompleted']);
     Route::get('/bookings/{booking}/session', [BookingSessionController::class, 'show']);
     Route::post('/bookings/{booking}/session/start', [BookingSessionController::class, 'start']);
     Route::post('/bookings/{booking}/session/end', [BookingSessionController::class, 'end']);
     Route::post('/bookings/{booking}/session/ping', [BookingSessionController::class, 'ping']);
+    Route::post('/media/chat-image', [MediaController::class, 'uploadChatImage']);
 
     // User Dashboard Routes
     Route::get('/dashboard/profile', [UserDashboardController::class, 'getProfile']);
@@ -71,6 +76,9 @@ Route::get('/admin/users', [ApiAuthController::class, 'getAllUsers']);
 Route::get('/admin/dashboard-stats', [ApiAuthController::class, 'getAdminDashboardStats']);
 Route::post('/admin/astrologers/create', [ApiAuthController::class, 'createAstrologer']);
 Route::get('/admin/astrologers', [ApiAuthController::class, 'getAstrologers']);
+Route::get('/admin/astrologers/{id}', [ApiAuthController::class, 'getAdminAstrologer']);
+Route::post('/admin/astrologers/{id}', [ApiAuthController::class, 'updateAdminAstrologer']);
+Route::delete('/admin/astrologers/{id}', [ApiAuthController::class, 'deleteAdminAstrologer']);
 Route::get('/admin/search', [ApiAuthController::class, 'adminSearch']);
 
 // Admin Booking Routes
@@ -111,7 +119,10 @@ Route::post('/admin/ecomm/products/update/{id}', [AdminEcommController::class, '
 Route::delete('/admin/ecomm/products/{id}', [AdminEcommController::class, 'deleteProduct']);
 Route::get('/admin/rituals', [RitualController::class, 'adminIndex']);
 Route::post('/admin/rituals', [RitualController::class, 'store']);
+Route::post('/admin/rituals/{id}', [RitualController::class, 'update']);
 Route::delete('/admin/rituals/{id}', [RitualController::class, 'destroy']);
+Route::get('/admin/ritual-bookings', [RitualBookingController::class, 'index']);
+Route::post('/admin/ritual-bookings/{ritualBooking}/status', [RitualBookingController::class, 'updateStatus']);
 
 // Prokerala API Proxy Endpoints
 Route::get('/astrology/horoscope/daily', [AstrologyController::class, 'getDailyHoroscope']);
@@ -127,6 +138,8 @@ Route::get('/prokerala/location/search', [AstrologyController::class, 'searchLoc
 // Premium Prokerala Endpoints
 Route::post('/prokerala/divisional-charts', [AstrologyController::class, 'getDivisionalCharts']);
 Route::post('/prokerala/predictions', [AstrologyController::class, 'getPredictions']);
+Route::post('/prokerala/vedic-calculators/{calculator}', [AstrologyController::class, 'getVedicCalculator']);
+Route::post('/prokerala/matching-calculators/{calculator}', [AstrologyController::class, 'getMatchingCalculator']);
 Route::post('/prokerala/numerology', [AstrologyController::class, 'getNumerology']);
 Route::post('/prokerala/sadesati', [AstrologyController::class, 'getSadesati']);
 Route::post('/prokerala/lal-kitab', [AstrologyController::class, 'getLalKitab']);

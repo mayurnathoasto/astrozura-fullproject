@@ -3,6 +3,10 @@
 return [
     'token_ttl' => (int) env('ZEGO_TOKEN_TTL', 6 * 60 * 60),
     'session' => [
+        'test_mode' => filter_var(
+            env('ZEGO_SESSION_TEST_MODE', env('APP_ENV', 'production') === 'local' ? 'true' : 'false'),
+            FILTER_VALIDATE_BOOLEAN
+        ),
         'join_grace_before_minutes' => (int) env('ZEGO_JOIN_GRACE_BEFORE_MINUTES', 10),
         'join_grace_after_minutes' => (int) env('ZEGO_JOIN_GRACE_AFTER_MINUTES', 15),
         'low_time_warning_seconds' => (int) env('ZEGO_LOW_TIME_WARNING_SECONDS', 120),

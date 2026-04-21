@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -37,6 +39,7 @@ class Booking extends Model
         'session_ended_by',
         'session_end_reason',
         'notes',
+        'birth_details',
     ];
 
     protected $casts = [
@@ -49,6 +52,7 @@ class Booking extends Model
         'session_warning_sent_at' => 'datetime',
         'session_last_activity_at' => 'datetime',
         'amount' => 'decimal:2',
+        'birth_details' => 'array',
     ];
 
     public function user()
@@ -59,5 +63,53 @@ class Booking extends Model
     public function astrologer()
     {
         return $this->belongsTo(User::class, 'astrologer_id');
+    }
+
+    public function setScheduledAtAttribute($value): void
+    {
+        $this->attributes['scheduled_at'] = $this->normalizeDateTimeForStorage($value);
+    }
+
+    public function setEndsAtAttribute($value): void
+    {
+        $this->attributes['ends_at'] = $this->normalizeDateTimeForStorage($value);
+    }
+
+    public function setCompletedAtAttribute($value): void
+    {
+        $this->attributes['completed_at'] = $this->normalizeDateTimeForStorage($value);
+    }
+
+    public function setSessionStartedAtAttribute($value): void
+    {
+        $this->attributes['session_started_at'] = $this->normalizeDateTimeForStorage($value);
+    }
+
+    public function setSessionEndedAtAttribute($value): void
+    {
+        $this->attributes['session_ended_at'] = $this->normalizeDateTimeForStorage($value);
+    }
+
+    public function setSessionWarningSentAtAttribute($value): void
+    {
+        $this->attributes['session_warning_sent_at'] = $this->normalizeDateTimeForStorage($value);
+    }
+
+    public function setSessionLastActivityAtAttribute($value): void
+    {
+        $this->attributes['session_last_activity_at'] = $this->normalizeDateTimeForStorage($value);
+    }
+
+    private function normalizeDateTimeForStorage($value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $dateTime = $value instanceof CarbonInterface
+            ? $value->copy()
+            : Carbon::parse($value, $this->timezone ?: 'Asia/Kolkata');
+
+        return $dateTime->utc()->format('Y-m-d H:i:s');
     }
 }

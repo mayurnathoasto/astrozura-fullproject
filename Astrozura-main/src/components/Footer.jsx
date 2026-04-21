@@ -12,12 +12,12 @@ export default function Footer() {
   const { user } = useAuth();
   
   const servicesLinks = [
-    { label: t("nav.panchang"), to: "/panchang" },
-    { label: t("nav.kundli"), to: "/kundli" },
-    { label: t("nav.rashifal"), to: "/rashifal" },
-    { label: t("nav.matching"), to: "/matching" },
-    { label: t("nav.astrologers"), to: "/astrologers" },
-    { label: t("footer.pooja"), to: "/rituals" },
+    { label: "View All Services", to: "/services" },
+    { label: "Pooja Anusthan", to: "/rituals" },
+    { label: "Horoscope", to: "/rashifal?period=today" },
+    { label: "Matchmaking", to: "/matching" },
+    { label: "Birth Chart", to: "/kundli" },
+    { label: "Astrologers", to: "/astrologers" },
   ];
 
   const companyLinks = [
@@ -131,7 +131,7 @@ export default function Footer() {
             <Link to="/terms-and-conditions" className="transition hover:text-[#D4A73C]">
               {t("footer.disclaimer")}
             </Link>
-            <Link to="/rituals" className="transition hover:text-[#D4A73C]">
+            <Link to="/services" className="transition hover:text-[#D4A73C]">
               {t("footer.sitemap")}
             </Link>
           </div>

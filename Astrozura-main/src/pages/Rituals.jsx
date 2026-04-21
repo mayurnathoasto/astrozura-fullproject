@@ -195,7 +195,7 @@ export default function Rituals() {
                           <Link to={`/rituals/${ritual.slug}`} className="rounded-xl border border-[#1E3557] px-4 py-2.5 text-center text-sm font-semibold text-[#1E3557] hover:bg-[#1E3557] hover:text-white transition">
                             View Details
                           </Link>
-                          <button type="button" onClick={() => navigate(`/rituals/${ritual.slug}`)} className="rounded-xl bg-[#1E3557] px-4 py-2.5 text-sm font-bold text-white">
+                          <button type="button" onClick={() => navigate(`/rituals/${ritual.slug}/book`)} className="rounded-xl bg-[#1E3557] px-4 py-2.5 text-sm font-bold text-white">
                             Book Now
                           </button>
                         </div>

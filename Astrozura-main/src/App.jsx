@@ -10,10 +10,16 @@ import ChatPage from "./pages/ChatPage";
 import Subscription from "./pages/Subscription";
 import Rituals from "./pages/Rituals";
 import RitualDetail from "./pages/RitualDetail";
+import RitualBooking from "./pages/RitualBooking";
 import Matching from "./pages/Matching";
 import Kundli from "./pages/Kundli";
+import Numerology from "./pages/Numerology";
 import Rashifal from "./pages/Rashifal";
 import Panchang from "./pages/Panchang";
+import Services from "./pages/Services";
+import ServiceDetail from "./pages/ServiceDetail";
+import VedicCalculators from "./pages/VedicCalculators";
+import MatchingCalculators from "./pages/MatchingCalculators";
 import AboutUs from "./pages/AboutUs";
 import ContactSupport from "./pages/ContactSupport";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -47,9 +53,19 @@ function App() {
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/rituals" element={<Rituals />} />
           <Route path="/rituals/:slug" element={<RitualDetail />} />
+          <Route path="/rituals/:slug/book" element={
+            <ProtectedRoute>
+              <RitualBooking />
+            </ProtectedRoute>
+          } />
+          <Route path="/services" element={<Services />} />
+          <Route path="/services/:slug" element={<ServiceDetail />} />
+          <Route path="/vedic-calculators" element={<VedicCalculators />} />
+          <Route path="/matching-calculators" element={<MatchingCalculators />} />
           <Route path="/subscription" element={<Subscription />} />
           <Route path="/matching" element={<Matching />} />
           <Route path="/kundli" element={<Kundli />} />
+          <Route path="/numerology" element={<Numerology />} />
           <Route path="/rashifal" element={<Rashifal />} />
           <Route path="/panchang" element={<Panchang />} />
           <Route path="/about-us" element={<AboutUs />} />

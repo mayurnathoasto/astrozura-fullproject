@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Star, Sparkles, HeartHandshake, TrendingUp } from "lucide-react";
 import {
@@ -34,6 +35,7 @@ const zodiac = [
 
 export default function Premium() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [message, setMessage] = useState("");
   const [activeSign, setActiveSign] = useState("aries");
   const [activePeriod, setActivePeriod] = useState("daily");
@@ -42,10 +44,30 @@ export default function Premium() {
   const [horoscopeError, setHoroscopeError] = useState("");
 
   const services = [
-    { title: t("premium.services.vedic_astrology") || "Vedic Astrology", icon: <Star size={24} strokeWidth={1.5} className="text-white" />, price: "Rs 29.99" },
-    { title: t("premium.services.muhurat") || "Muhurat", icon: <Sparkles size={24} strokeWidth={1.5} className="text-white" />, price: "Rs 19.99" },
-    { title: t("premium.services.lal_kitab") || "Lal Kitab", icon: <HeartHandshake size={24} strokeWidth={1.5} className="text-white" />, price: "Rs 34.99" },
-    { title: t("premium.services.palmistry") || "Palmistry", icon: <TrendingUp size={24} strokeWidth={1.5} className="text-white" />, price: "Rs 24.99" },
+    {
+      title: t("premium.services.vedic_astrology") || "Vedic Astrology",
+      icon: <Star size={24} strokeWidth={1.5} className="text-white" />,
+      price: "Rs 29.99",
+      to: "/astrologers",
+    },
+    {
+      title: t("premium.services.muhurat") || "Muhurat",
+      icon: <Sparkles size={24} strokeWidth={1.5} className="text-white" />,
+      price: "Rs 19.99",
+      to: "/panchang",
+    },
+    {
+      title: t("premium.services.lal_kitab") || "Lal Kitab",
+      icon: <HeartHandshake size={24} strokeWidth={1.5} className="text-white" />,
+      price: "Rs 34.99",
+      to: "/services/lal-kitab-report",
+    },
+    {
+      title: t("premium.services.palmistry") || "Palmistry",
+      icon: <TrendingUp size={24} strokeWidth={1.5} className="text-white" />,
+      price: "Rs 24.99",
+      to: "/services/palm-reading",
+    },
   ];
 
   useEffect(() => {
@@ -124,7 +146,7 @@ export default function Premium() {
           </div>
 
           <button
-            onClick={() => notify(t("main.notif_all_astrologers"))}
+            onClick={() => navigate("/services")}
             className="text-[#c7926a] text-xs font-medium hover:underline"
           >
             {t("premium.view_all")}
@@ -155,7 +177,10 @@ export default function Premium() {
                 </p>
 
                 <button
-                  onClick={() => notify(`${item.title} booked successfully`)}
+                  onClick={() => {
+                    notify(`${item.title} selected`);
+                    navigate(item.to);
+                  }}
                   className="text-[11px] border border-[#1E3557] text-[#1E3557] px-3 py-1 rounded-full hover:bg-[#1E3557] hover:text-white transition font-medium"
                 >
                   {t("premium.book_now")}

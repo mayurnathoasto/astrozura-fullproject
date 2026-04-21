@@ -10,8 +10,18 @@ export const createBooking = async (payload) => {
   return response.data;
 };
 
+export const createRitualBooking = async (ritualId, payload) => {
+  const response = await api.post(`/rituals/${ritualId}/book`, payload);
+  return response.data;
+};
+
 export const getMyBookings = async () => {
   const response = await api.get("/my-bookings");
+  return response.data;
+};
+
+export const getMyRitualBookings = async () => {
+  const response = await api.get("/my-ritual-bookings");
   return response.data;
 };
 

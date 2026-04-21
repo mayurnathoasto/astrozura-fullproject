@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\RitualService;
 use App\Models\User;
+use App\Support\MediaStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -101,7 +102,74 @@ class RitualController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $validated = $this->validateRitual($request);
+
+        $slug = Str::slug($validated['name']);
+        $baseSlug = $slug;
+        $counter = 2;
+        while (RitualService::where('slug', $slug)->exists()) {
+            $slug = $baseSlug . '-' . $counter;
+            $counter++;
+        }
+
+        $ritual = RitualService::create($this->buildRitualPayload($request, $validated, $slug));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Ritual created successfully.',
+            'ritual' => $ritual->load('assignedAstrologer.astrologerDetail'),
+        ]);
+    }
+
+    public function update(Request $request, int $id)
+    {
+        $ritual = RitualService::find($id);
+
+        if (!$ritual) {
+            return response()->json(['success' => false, 'message' => 'Ritual not found.'], 404);
+        }
+
+        $validated = $this->validateRitual($request);
+        $slug = $ritual->slug;
+
+        if ($ritual->name !== $validated['name']) {
+            $slug = Str::slug($validated['name']);
+            $baseSlug = $slug;
+            $counter = 2;
+            while (RitualService::where('slug', $slug)->where('id', '!=', $ritual->id)->exists()) {
+                $slug = $baseSlug . '-' . $counter;
+                $counter++;
+            }
+        }
+
+        $ritual->update($this->buildRitualPayload($request, $validated, $slug, $ritual));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Ritual updated successfully.',
+            'ritual' => $ritual->fresh()->load('assignedAstrologer.astrologerDetail'),
+        ]);
+    }
+
+    public function destroy(int $id)
+    {
+        $ritual = RitualService::find($id);
+
+        if (!$ritual) {
+            return response()->json(['success' => false, 'message' => 'Ritual not found.'], 404);
+        }
+
+        $ritual->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Ritual deleted successfully.',
+        ]);
+    }
+
+    private function validateRitual(Request $request): array
+    {
+        return $request->validate([
             'name' => 'required|string|max:255',
             'service_type' => 'required|string|max:120',
             'category' => 'required|string|max:120',
@@ -122,26 +190,16 @@ class RitualController extends Controller
             'faqs' => 'nullable|string',
             'mantras' => 'nullable|string',
         ]);
+    }
 
-        $slug = Str::slug($validated['name']);
-        $baseSlug = $slug;
-        $counter = 2;
-        while (RitualService::where('slug', $slug)->exists()) {
-            $slug = $baseSlug . '-' . $counter;
-            $counter++;
-        }
-
-        $imagePath = null;
+    private function buildRitualPayload(Request $request, array $validated, string $slug, ?RitualService $ritual = null): array
+    {
+        $imagePath = $ritual?->image;
         if ($request->hasFile('image')) {
-            if (!is_dir(public_path('uploads/rituals'))) {
-                mkdir(public_path('uploads/rituals'), 0755, true);
-            }
-            $imageName = time() . '-' . Str::slug(pathinfo($request->file('image')->getClientOriginalName(), PATHINFO_FILENAME)) . '.' . $request->file('image')->extension();
-            $request->file('image')->move(public_path('uploads/rituals'), $imageName);
-            $imagePath = 'uploads/rituals/' . $imageName;
+            $imagePath = MediaStorage::store($request->file('image'), 'rituals');
         }
 
-        $ritual = RitualService::create([
+        return [
             'name' => $validated['name'],
             'slug' => $slug,
             'service_type' => $validated['service_type'],
@@ -162,29 +220,7 @@ class RitualController extends Controller
             'materials' => $this->parseLineItems($request->input('materials')),
             'faqs' => $this->parseFaqItems($request->input('faqs')),
             'mantras' => $this->parseLineItems($request->input('mantras')),
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Ritual created successfully.',
-            'ritual' => $ritual->load('assignedAstrologer.astrologerDetail'),
-        ]);
-    }
-
-    public function destroy(int $id)
-    {
-        $ritual = RitualService::find($id);
-
-        if (!$ritual) {
-            return response()->json(['success' => false, 'message' => 'Ritual not found.'], 404);
-        }
-
-        $ritual->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Ritual deleted successfully.',
-        ]);
+        ];
     }
 
     private function parseLineItems(?string $value): array

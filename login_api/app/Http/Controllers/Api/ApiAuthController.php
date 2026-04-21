@@ -7,6 +7,7 @@ use App\Models\Booking;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
+use App\Support\MediaStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -343,12 +344,7 @@ class ApiAuthController extends Controller
         }
 
         if ($request->hasFile('profile_image')) {
-            if (!is_dir(public_path('uploads/admin-profiles'))) {
-                mkdir(public_path('uploads/admin-profiles'), 0755, true);
-            }
-            $imageName = time() . '-' . Str::slug(pathinfo($request->file('profile_image')->getClientOriginalName(), PATHINFO_FILENAME)) . '.' . $request->file('profile_image')->extension();
-            $request->file('profile_image')->move(public_path('uploads/admin-profiles'), $imageName);
-            $user->profile_image = '/uploads/admin-profiles/' . $imageName;
+            $user->profile_image = MediaStorage::store($request->file('profile_image'), 'admin-profiles');
         }
 
         $user->save();
@@ -475,12 +471,7 @@ class ApiAuthController extends Controller
 
         $profileImagePath = null;
         if ($request->hasFile('profile_image')) {
-            if (!is_dir(public_path('uploads/astrologers'))) {
-                mkdir(public_path('uploads/astrologers'), 0755, true);
-            }
-            $imageName = time() . '-' . Str::slug(pathinfo($request->file('profile_image')->getClientOriginalName(), PATHINFO_FILENAME)) . '.' . $request->file('profile_image')->extension();
-            $request->file('profile_image')->move(public_path('uploads/astrologers'), $imageName);
-            $profileImagePath = '/uploads/astrologers/' . $imageName;
+            $profileImagePath = MediaStorage::store($request->file('profile_image'), 'astrologers');
         }
 
         $user->astrologerDetail()->create([
@@ -544,6 +535,110 @@ class ApiAuthController extends Controller
         ]);
     }
 
+    public function getAdminAstrologer(int $id)
+    {
+        $astrologer = User::with('astrologerDetail')
+            ->where('role', 'astrologer')
+            ->find($id);
+
+        if (!$astrologer) {
+            return response()->json(['success' => false, 'message' => 'Astrologer not found'], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'astrologer' => $astrologer,
+        ]);
+    }
+
+    public function updateAdminAstrologer(Request $request, int $id)
+    {
+        $user = User::with('astrologerDetail')
+            ->where('role', 'astrologer')
+            ->find($id);
+
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Astrologer not found'], 404);
+        }
+
+        $request->merge([
+            'is_featured' => filter_var($request->input('is_featured', false), FILTER_VALIDATE_BOOLEAN),
+        ]);
+
+        $validator = Validator::make($request->all(), [
+            'firstName' => 'required|string|max:255',
+            'lastName' => 'nullable|string|max:255',
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'password' => 'nullable|string|min:6',
+            'experience_years' => 'required|numeric',
+            'languages' => 'nullable|string',
+            'specialities' => 'nullable|string',
+            'chat_price' => 'required|numeric',
+            'call_price' => 'required|numeric',
+            'about_bio' => 'nullable|string',
+            'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'is_featured' => 'nullable|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
+        }
+
+        $user->name = trim($request->firstName . ' ' . $request->lastName);
+        $user->email = $request->email;
+
+        if ($request->filled('password')) {
+            $user->password = bcrypt($request->password);
+        }
+
+        $user->save();
+
+        $profileImagePath = $user->astrologerDetail?->profile_image;
+        if ($request->hasFile('profile_image')) {
+            $profileImagePath = MediaStorage::store($request->file('profile_image'), 'astrologers');
+        }
+
+        $user->astrologerDetail()->updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'experience_years' => $request->experience_years,
+                'languages' => $request->languages,
+                'specialities' => $request->specialities,
+                'chat_price' => $request->chat_price,
+                'call_price' => $request->call_price,
+                'about_bio' => $request->about_bio,
+                'profile_image' => $profileImagePath,
+                'is_featured' => $request->boolean('is_featured'),
+            ]
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Astrologer updated successfully',
+            'astrologer' => $user->fresh()->load('astrologerDetail'),
+        ]);
+    }
+
+    public function deleteAdminAstrologer(int $id)
+    {
+        $user = User::with('astrologerDetail')
+            ->where('role', 'astrologer')
+            ->find($id);
+
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Astrologer not found'], 404);
+        }
+
+        Booking::where('astrologer_id', $user->id)->update(['astrologer_id' => null]);
+        $user->astrologerDetail()?->delete();
+        $user->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Astrologer deleted successfully',
+        ]);
+    }
+
     public function updateAstrologerProfile(Request $request)
     {
         $user = $request->user();
@@ -586,12 +681,7 @@ class ApiAuthController extends Controller
 
         $profileImagePath = $user->astrologerDetail?->profile_image;
         if ($request->hasFile('profile_image')) {
-            if (!is_dir(public_path('uploads/astrologers'))) {
-                mkdir(public_path('uploads/astrologers'), 0755, true);
-            }
-            $imageName = time() . '-' . Str::slug(pathinfo($request->file('profile_image')->getClientOriginalName(), PATHINFO_FILENAME)) . '.' . $request->file('profile_image')->extension();
-            $request->file('profile_image')->move(public_path('uploads/astrologers'), $imageName);
-            $profileImagePath = '/uploads/astrologers/' . $imageName;
+            $profileImagePath = MediaStorage::store($request->file('profile_image'), 'astrologers');
         }
 
         $user->astrologerDetail()->updateOrCreate(
