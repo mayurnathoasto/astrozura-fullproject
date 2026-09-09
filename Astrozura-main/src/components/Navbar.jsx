@@ -7,6 +7,11 @@ import { useAuth } from "../context/AuthContext";
 import { groupedServices } from "../data/serviceCatalog";
 import { API_BASE_URL } from "../utils/apiBase";
 import { assetUrl } from "../utils/assetUrl";
+import {
+  SUPPORTED_LANGUAGES,
+  getCurrentLanguage,
+  applyLanguage,
+} from "../utils/translationService";
 
 export default function Navbar() {
   const { t, i18n } = useTranslation();
@@ -21,6 +26,7 @@ export default function Navbar() {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [navDropdownOpen, setNavDropdownOpen] = useState("");
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+  const [activeLang, setActiveLang] = useState(getCurrentLanguage());
   const [mobileGroupOpen, setMobileGroupOpen] = useState("");
   const [ritualCategories, setRitualCategories] = useState([]);
   const [headerVisible, setHeaderVisible] = useState(true);
@@ -221,7 +227,9 @@ export default function Navbar() {
   };
 
   const changeLanguage = (lng) => {
-    i18n.changeLanguage(lng);
+    setActiveLang(lng);
+    i18n.changeLanguage(lng === "hi" ? "hi" : "en");
+    applyLanguage(lng);
     setLangDropdownOpen(false);
   };
 
@@ -371,27 +379,38 @@ export default function Navbar() {
               type="button"
               onClick={() => setLangDropdownOpen((current) => !current)}
               className="flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-[10px] font-bold uppercase text-gray-600 transition hover:bg-gray-100"
+              title="Select Language"
             >
               <Globe2 size={13} />
-              {currentLang === "hi" ? "HI" : "EN"}
+              <span>{activeLang.toUpperCase()}</span>
             </button>
 
             {langDropdownOpen && (
-              <div className="absolute right-0 z-50 mt-2 w-32 overflow-hidden rounded-xl border border-gray-100 bg-white py-1 shadow-xl">
-                <button
-                  type="button"
-                  onClick={() => changeLanguage("en")}
-                  className={`block w-full px-4 py-2 text-left text-xs font-medium hover:bg-gray-50 ${currentLang === "en" ? "text-[#D4A73C]" : "text-gray-700"}`}
-                >
-                  English
-                </button>
-                <button
-                  type="button"
-                  onClick={() => changeLanguage("hi")}
-                  className={`block w-full px-4 py-2 text-left text-xs font-medium hover:bg-gray-50 ${currentLang === "hi" ? "text-[#D4A73C]" : "text-gray-700"}`}
-                >
-                  Hindi
-                </button>
+              <div className="absolute right-0 z-50 mt-2 max-h-80 w-52 overflow-y-auto rounded-xl border border-gray-100 bg-white py-1 shadow-xl">
+                <div className="border-b border-gray-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                  Select Language
+                </div>
+                {SUPPORTED_LANGUAGES.map((lang) => {
+                  const isSelected = activeLang === lang.code;
+                  return (
+                    <button
+                      key={lang.code}
+                      type="button"
+                      onClick={() => changeLanguage(lang.code)}
+                      className={`flex w-full items-center justify-between px-3.5 py-2 text-left text-xs font-medium transition hover:bg-[#FFF6E5] ${
+                        isSelected ? "bg-[#FFFBF2] font-bold text-[#D4A73C]" : "text-gray-700"
+                      }`}
+                    >
+                      <span className="flex items-center gap-2 truncate">
+                        <span className="text-sm">{lang.flag}</span>
+                        <span className="truncate">{lang.nativeName}</span>
+                      </span>
+                      <span className="text-[10px] font-semibold uppercase text-gray-400">
+                        {lang.code}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
